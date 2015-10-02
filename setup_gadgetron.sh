@@ -15,7 +15,7 @@ if ! [ -d $GADGETRON_VENV ]; then
     banner "Creating fresh Python virtual environment: $GADGETRON_VENV"
     mkdir -p $GADGETRON_VENV
     virtualenv $GADGETRON_VENV | redirect venv.log
-    banner "You need to do 'activate_gadgetron'"
+    newVenv=yes
 fi
 
 . $GADGETRON_VENV/bin/activate
@@ -40,4 +40,7 @@ mkdir -p ../build
 
 banner Success!
 
+if [ "$newVenv." = "yes." ]; then
+    request "You need to do 'activate_gadgetron' in this shell."
+fi
 

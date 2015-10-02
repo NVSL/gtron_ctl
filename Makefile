@@ -1,7 +1,8 @@
 .PHONY: default
 default:
-	./pipinstall.sh
-	./gitinstall.sh
+	./setup_gadgetron.sh
+	./update_gadgetron.sh
+
 .PHONY: clean
 clean:
 	true;
