@@ -43,6 +43,18 @@ banner Installing Brew packages
 brew tap homebrew/x11
 brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget || error Brew failed
 
+banner "Installing python virtualenv..."
+#install virtualenv
+pip install virtualenv || error Installing virtualenv failed.
+
+#install global javascript resources
+banner "Installing global javascript resources..."
+npm install -g bower tsd grunt grunt-cli  || error NPM installs failed.
+
+#banner "Installing python packages..."
+pip install --upgrade pip setuptools || error pip upgrade failed.
+pip install cython lxml pypng beautifulsoup4 requests svgwrite Mako clang bintrees numpy jinja2 Sphinx asciitree rtree pyparsing || error pip install failed.
+
 # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
 banner "Installing Eagle..."
 wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip || error Downloading eagle failed
@@ -57,19 +69,6 @@ banner "Installing latest version of Arduino..."
 wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip || error Downloading Arduino failed.
 unzip arduino-1.6.4-macosx.zip || error Unzipping Arduino failed.
 mv Arduino.app /Applications/ || error Installing ARduino failed.
-
-
-banner "Installing python virtualenv..."
-#install virtualenv
-pip install virtualenv || error Installing virtualenv failed.
-
-#install global javascript resources
-banner "Installing global javascript resources..."
-npm install -g bower tsd grunt grunt-cli  || error NPM installs failed.
-
-#banner "Installing python packages..."
-pip install --upgrade pip setuptools || error pip upgrade failed.
-pip install cython lxml pypng beautifulsoup4 requests svgwrite Mako clang bintrees numpy jinja2 Sphinx asciitree rtree pyparsing || error pip install failed.
 
 banner "Installing Google app engine..."
 
@@ -99,5 +98,3 @@ fi
 echo export USE_VENV=yes >> ~/.bashrc
 
 banner "All done!!!"
-
-

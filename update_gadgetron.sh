@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+pushd ${0%/*}
+
 # Envisioned workload:
 #  1.  Create a new development direcotry: 'mkdir Gadgetron'
 #  2.  git clone git@github.com:NVSL/gadgetron-setup.git
@@ -72,7 +74,7 @@ do_cmd mkdir -p $LIB_DIR
 TOOL_DIR=$GADGETRON_ROOT/Tools
 do_cmd mkdir -p $TOOL_DIR
 
-for step in build; do # get_or_update build;do 
+for step in get_or_update build;do 
 
     banner "Performing $step"
     

@@ -2,7 +2,6 @@ function banner () {
     echo
     echo "========================================================"
     builtin echo "$@"
-    echo
     echo "========================================================"
 
 }
@@ -11,7 +10,6 @@ function request () {
     echo
     echo "===================== TAKE ACTION! ====================="
     builtin echo "$@"
-    echo
     echo "========================================================"
 
 }
@@ -20,7 +18,6 @@ function error () {
     echo
     echo "===================== FAILURE: ========================="
     builtin echo "$@"
-    echo
     echo "========================================================"
     exit
 }
@@ -170,7 +167,7 @@ function build () {
 
 function confirm_venv() {
     if ! [ `which python` = "$GADGETRON_VENV/bin/python" ];then
-	error "Not in \$GADGETRON_VENV virtual env.  Quiting."
+	error "Not in \$GADGETRON_VENV virtual env.  Quiting.  You need to do '. setup_gadgetron'" 
 	exit 1
     fi
 }

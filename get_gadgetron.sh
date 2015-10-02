@@ -1,5 +1,6 @@
 #!/bin/bash
     
+pushd ${0%/*}
 
 function banner () {
     echo
@@ -27,10 +28,9 @@ function error () {
 
 # Get latest version
 if ! [ "$1." = "up-to-date." ]; then
-
-    wget --no-cache -O checkout_gadgetron -o update.log https://github.com/NVSL/gadgetron-vm-util/raw/master/checkout_gadgetron;
-    chmod u+x checkout_gadgetron ;
-    exec ./checkout_gadgetron up-to-date
+    wget --no-cache -O get_gadgetron.sh -o update.log https://github.com/NVSL/gadgetron-vm-util/raw/master/get_gadgetron.sh;
+    chmod u+x get_gadgetron.sh;
+    exec ./get_gadgetron.sh up-to-date
 fi
 
 # get sudo permision early.
@@ -70,15 +70,17 @@ if ! [ -d "Gadgetron" ]; then
     ./initial_setup gadgets)
 fi
 
-cd Gadgetron/gadgetron_ctl/
+source setup_gadgets
 
 ./update_system.sh
-./prepare_gadgetron.sh
-./build_gadgetron.sh
+./setup_gadgetron.sh
+./update_gadgetron.sh
 
 banner Done!
 
-request "Type ' (cd Gadgetron/Gadgets/Tools/jet_2/; make run)' to start jet."
+request "You need to do 'source Gadgetron/setup_gadgets'"
+
+request "Then you can type ' (cd Gadgetron/Gadgets/Tools/jet_2/; make run)' to start jet."
 
 
 #sleep 1;
