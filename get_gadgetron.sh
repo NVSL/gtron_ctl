@@ -72,7 +72,7 @@ fi
 
 cd Gadgetron/gadgetron_ctl/
 
-./sysUpdate.sh
+./update_system.sh
 ./prepare_gadgetron.sh
 ./build_gadgetron.sh
 
