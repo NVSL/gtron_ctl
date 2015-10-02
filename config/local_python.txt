@@ -1,0 +1,15 @@
+cython
+lxml
+pypng
+beautifulsoup4
+requests
+svgwrite
+Mako
+clang
+bintrees
+numpy
+jinja2
+Sphinx
+asciitree
+rtree
+pyparsing

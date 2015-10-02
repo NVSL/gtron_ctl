@@ -1,0 +1,17 @@
+python
+spatialindex
+cgal
+swig
+sdl
+sdl_image
+sdl_mixer
+sdl_ttf
+portmidi
+hg
+inkscape
+curl
+nodejs
+libxml2
+libxslt
+wget
+
