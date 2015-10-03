@@ -32,12 +32,12 @@ EOF
 
 function install_global_python() {
     banner "Installing gloabla python packages..."
-    $SUDO pip install -r lib/global_python.txt
+    $SUDO pip install -r ../config/global_python.txt
 }
 
 function install_global_javascript() {
     banner "Installing global javascript resources..."
-    $SUDO npm install -g $(cat config/global_node.txt)
+    $SUDO npm install -g $(cat ../config/global_node.txt)
 }
 
 function ensure_ssh_key() {

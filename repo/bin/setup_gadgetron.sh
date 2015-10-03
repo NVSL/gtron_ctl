@@ -23,7 +23,7 @@ source $GADGETRON_VENV/bin/activate
 confirm_venv
 
 banner "Installing local python dependencies"
-pip install -r config/local_python.txt | redirect local_python.log
+pip install -r ../config/local_python.txt | redirect local_python.log
 
 banner "(re)building cgal bindings from git"
 mkdir -p ../build
