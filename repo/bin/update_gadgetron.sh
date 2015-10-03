@@ -10,7 +10,7 @@ pushd ${0%/*}
 
 #  You should have all the gadgetron tools in 'Gadgetron/' ready for your hacking/committing etc.  All dependencies should be properly tracked and installed a private virtualenv.
 
-. lib/install_util.sh
+source ../lib/install_util.sh
 
 confirm_gadgetron
 confirm_venv

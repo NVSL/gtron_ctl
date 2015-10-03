@@ -16,17 +16,16 @@
 
 pushd ${0%/*}
 
-source lib/install_util.sh
+source ../lib/install_util.sh
 
-source lib/install_common.sh
+source ../lib/install_common.sh
 
 if [ "$(uname)." = "Darwin." ]; then
-    source lib/install_mac.sh
+    source ../lib/install_mac.sh
 else
-    source lib/install_ubuntu.sh
+    source ../lib/install_ubuntu.sh
     SUDO="sudo -H"
 fi
-
 
 check_for_package_manager
 install_system_packages 

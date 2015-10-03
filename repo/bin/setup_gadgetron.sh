@@ -2,7 +2,7 @@
 
 cd ${0%/*}
 
-. lib/install_util.sh
+source ../lib/install_util.sh
 
 confirm_gadgetron
 
@@ -18,7 +18,7 @@ if ! [ -d $GADGETRON_VENV ]; then
     newVenv=yes
 fi
 
-. $GADGETRON_VENV/bin/activate
+source $GADGETRON_VENV/bin/activate
 
 confirm_venv
 

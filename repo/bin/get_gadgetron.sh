@@ -9,8 +9,8 @@ pushd ${0%/*}
 #    exec ./get_gadgetron.sh up-to-date
 #fi
 
-source lib/install_util.sh
-source lib/install_commmon.sh
+source ../lib/install_util.sh
+source ../lib/install_commmon.sh
 
 if ! [ -e "./Gadgetron" -a -e ~/.ssh/id_rsa.pub ]; then
     request "Enter your NVSL lab username:"

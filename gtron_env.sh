@@ -22,13 +22,8 @@ $GADGETRON_ROOT/Tools/dummysch:\
 $GADGETRON_ROOT/Tools/Checkers:\
 $GADGETRON_ROOT/Tools/GCompiler:\
 $GADGETRON_ROOT/Tools/CbC/bin:\
-$PWD/gadgetron_ctl:\
-$PWD/gadgetron_ctl/svn_util:\
-$PWD/gadgetron_ctl/vm_util:\
-$PWD/gtron_ctl:\
-$PWD/gtron_ctl/svn_util:\
-$PWD/gtron_ctl/vm_util:\
 /Applications/Arduino.app/Contents/MacOS:\
+$PWD/repo/bin:\
 $PATH
 
 function activate_gadgetron () {
