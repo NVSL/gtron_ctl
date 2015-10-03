@@ -3,7 +3,7 @@
 CDIR=`pwd`
 
 export GADGETRON_ROOT=$PWD/Gadgets
-export GADGETRON_VENV=$PWD/build/Gadgetron
+export GADGETRON_VENV=$PWD/repo/venv/Gadgetron
 
 #  Setup the PATH
 PATH=$GADGETRON_ROOT/Tools/BOBBuilder:\
