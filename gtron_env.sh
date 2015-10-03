@@ -22,7 +22,9 @@ $GADGETRON_ROOT/Tools/dummysch:\
 $GADGETRON_ROOT/Tools/Checkers:\
 $GADGETRON_ROOT/Tools/GCompiler:\
 $GADGETRON_ROOT/Tools/CbC/bin:\
-$NVSL_DEVEL_ROOT/gadgetron_ctl:\
+$PWD/gadgetron_ctl:\
+$PWD/gadgetron_ctl/svn_util:\
+$PWD/gadgetron_ctl/vm_util:\
 /Applications/Arduino.app/Contents/MacOS:\
 $PATH
 
