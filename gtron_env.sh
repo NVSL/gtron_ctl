@@ -25,6 +25,9 @@ $GADGETRON_ROOT/Tools/CbC/bin:\
 $PWD/gadgetron_ctl:\
 $PWD/gadgetron_ctl/svn_util:\
 $PWD/gadgetron_ctl/vm_util:\
+$PWD/gtron_ctl:\
+$PWD/gtron_ctl/svn_util:\
+$PWD/gtron_ctl/vm_util:\
 /Applications/Arduino.app/Contents/MacOS:\
 $PATH
 
