@@ -179,3 +179,7 @@ function confirm_gadgetron() {
     fi
 }
 
+function start_ssh_agent() {
+    eval `ssh-agent`
+    ssh-add
+}

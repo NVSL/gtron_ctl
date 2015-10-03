@@ -2,7 +2,7 @@
 
 cd ${0%/*}
 
-. ./install_util.sh
+. lib/install_util.sh
 
 confirm_gadgetron
 
@@ -24,8 +24,6 @@ confirm_venv
 
 banner "Installing local python dependencies"
 pip install -r config/local_python.txt | redirect local_python.log
-
-#pip install -r $GADGETRON_ROOT/Tools/CbC/requirements.txt
 
 banner "(re)building cgal bindings from git"
 mkdir -p ../build
