@@ -31,11 +31,15 @@ check_for_package_manager
 install_system_packages 
 install_global_python 
 install_global_javascript 
-install_eagle 
-install_arduino 
-install_GAE 
-init_github 
-setup_user_ssh 
+
+if [ "$1." = "--install." ]; then
+    install_eagle 
+    install_arduino 
+    install_GAE 
+    init_github 
+    setup_user_ssh
+fi
+
 fix_up
 
 banner "All done!!!"
