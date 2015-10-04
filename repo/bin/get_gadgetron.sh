@@ -1,18 +1,22 @@
 #!/bin/bash
 
-pushd ${0%/*}
+if [ "$(uname)." = "Darwin." ]; then
+    true;
+else
+    apt-get -y install git
+fi
 
-# Get latest version
-#if ! [ "$1." = "up-to-date." ]; then
-#    wget --no-cache -O get_gadgetron.sh -o update.log https://github.com/NVSL/gadgetron-vm-util/raw/master/get_gadgetron.sh;
-#    chmod u+x get_gadgetron.sh;
-#    exec ./get_gadgetron.sh up-to-date
-#fi
+if ! [ -d gtron_devel ]; then
+    git clone git@github.com:NVSL/gtron_devel.git
+else
+    (cd gtron_devel; git pull)
+fi
 
-source ../lib/install_util.sh
-source ../lib/install_commmon.sh
+cd gtron_devel
 
-if ! [ -e "./Gadgetron" -a -e ~/.ssh/id_rsa.pub ]; then
+. gtron_env.sh
+
+if ! [ -e "./Gadgets" -a -e ~/.ssh/id_rsa.pub ]; then
     request "Enter your NVSL lab username:"
     read user
 fi
@@ -24,18 +28,12 @@ fi
 
 start_ssh_agent
 
-checkout_gadgetron_root
-
-source setup_gadgets
-
-popd
-
-./update_system.sh
-./setup_gadgetron.sh
-./update_gadgetron.sh
+repo/bin/update_system.sh --install
+repo/bin/setup_gadgetron.sh
+repo/bin/update_gadgetron.sh
 
 banner Done!
 
-request "You need to do 'cd Gadgetron; source setup_gadgets'"
+request "You need to do 'cd gtron-devel; source gtron_env.sh; activate_gadgetron"
 
-request "Then you can type ' (cd Gadgetron/Gadgets/Tools/jet_2/; make run)' to start jet."
+request "Then you can type ' (cd Gadgets/Tools/jet_2/; make run)' to start jet."
