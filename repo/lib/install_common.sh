@@ -44,9 +44,10 @@ function ensure_ssh_key() {
     if ! [ -e ~/.ssh/id_rsa.pub ]; then 
 	request "Generating public key.  Please accept all the defaults"
 	ssh-keygen
-	return 1
+	true
+    else
+	false
     fi
-    return 0
 }
 
 function push_ssh_key_to_bb_cluster() {
