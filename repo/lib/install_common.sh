@@ -31,7 +31,7 @@ EOF
 }
 
 function install_global_python() {
-    banner "Installing gloabla python packages..."
+    banner "Installing global python packages..."
     $SUDO pip install -r ../config/global_python.txt
 }
 
