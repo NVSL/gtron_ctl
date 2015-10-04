@@ -22,7 +22,7 @@ else
 fi
 
 mkdir -p gtron_devel/repo/logs
-if [ -e git_install.log]; then
+if [ -e git_install.log ]; then
     mv git_install.log gtron_devel/repo/logs/
 fi
 if [ -e checkout_gtron_devel.log ]; then
