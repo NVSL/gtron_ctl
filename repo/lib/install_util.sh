@@ -33,6 +33,7 @@ function do_cmd() {
 }
 
 function save_log () {
+    mkdir -p ../logs
     if [ "$verbose." = "yes." ]; then
 	if [ ".$1" = ".-a" ];then
 	    tee -a ../logs/$2.log
