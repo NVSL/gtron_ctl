@@ -53,13 +53,13 @@ function ensure_ssh_key() {
 function push_ssh_key_to_bb_cluster() {
     if ! ssh -p425 -o PasswordAuthentication=no $user@bbfs-01.calit2.net; then
 	request "Can't log into the cluster without password.  Provide NVSL password to transfer pub key to svn repo"
-	cat .ssh/id_rsa.pub | ssh -p425 $user@bbfs-01.calit2.net "cat >> .ssh/authorized_keys"
+	cat ~/.ssh/id_rsa.pub | ssh -p425 $user@bbfs-01.calit2.net "cat >> .ssh/authorized_keys"
     fi
 }
 
 function push_ssh_key_to_github() {
     request  "Visit \n\nhttps://github.com/settings/ssh \n\nand add this key by copying and pasting it into the space provided.  Give it a meaningful name, like 'Gadgetron Development Key'"
-    cat .ssh/id_rsa.pub
+    cat ~/.ssh/id_rsa.pub
     
     request "PRESS RETURN WHEN YOU HAVE DONE SO. (waiting...)"
     read junk
