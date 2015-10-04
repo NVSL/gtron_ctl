@@ -1,9 +1,9 @@
 function init_github() {
     request "Making github work easily (say 'yes')"
-    git clone git@github.com:NVSL/gadgetron-vm-util.git
-    rm -rf gadgetron-vm-util
-    git clone git@github.com:NVSL/gadgetron-vm-util.git
-    rm -rf gadgetron-vm-util
+    (git clone git@github.com:NVSL/gadgetron-vm-util.git
+     rm -rf gadgetron-vm-util
+     git clone git@github.com:NVSL/gadgetron-vm-util.git
+     rm -rf gadgetron-vm-util) | save_log init_github
 }
 
 function setup_user_ssh() {
@@ -32,12 +32,12 @@ EOF
 
 function install_global_python() {
     banner "Installing global python packages..."
-    $SUDO pip install -r ../config/global_python.txt
+    $SUDO pip install -r ../config/global_python.txt | save_log install_global_python
 }
 
 function install_global_javascript() {
     banner "Installing global javascript resources..."
-    $SUDO npm install -g $(cat ../config/global_node.txt)
+    $SUDO npm install -g $(cat ../config/global_node.txt) | save_log install_global_javascript
 }
 
 function ensure_ssh_key() {

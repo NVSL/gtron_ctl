@@ -32,11 +32,19 @@ function do_cmd() {
     fi
 }
 
-function redirect () {
+function save_log () {
     if [ "$verbose." = "yes." ]; then
-	tee $1
+	if [ ".$1" = ".-a" ];then
+	    tee -a ../logs/$2.log
+	else
+	    tee ../logs/$1.log
+	fi
     else
-	cat > $1
+	if [ ".$1" = ".-a" ];then
+	    cat >> ../logs/$2.log
+	else
+	    cat > ../logs/$1.log
+	fi
     fi
 }
 
