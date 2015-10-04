@@ -10,15 +10,23 @@ if [ "$(uname)." = "Darwin." ]; then
     true;
 else
     echo Installing git...
-    sudo apt-get -y install git
+    sudo apt-get -y install git > git_install.log
 fi
 
 if ! [ -d gtron_devel ]; then
     echo Checking out gtron_devel
-    git clone https://github.com/NVSL/gtron_devel.git
+    git clone https://github.com/NVSL/gtron_devel.git > checkout_gtron_devel.log
 else
     echo Updating out gtron_devel
-    (cd gtron_devel; git pull)
+    (cd gtron_devel; git pull) > gtron_devel/repo/logs/update_gtron_devel.log
+fi
+
+mkdir -p gtron_devel/repo/logs
+if [ -e git_install.log]; then
+    mv git_install.log gtron_devel/repo/logs/
+fi
+if [ -e checkout_gtron_devel.log ]; then
+    mv checkout_gtron_devel.log gtron_devel/repo/logs/;
 fi
 
 cd gtron_devel
@@ -26,6 +34,7 @@ cd gtron_devel
 source gtron_env.sh
 
 source repo/lib/install_util.sh
+source repo/lib/install_common.sh
 
 if ! [ -e "./Gadgets" -a -e ~/.ssh/id_rsa.pub ]; then
     request "Enter your NVSL lab username:"
