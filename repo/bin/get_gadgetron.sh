@@ -3,11 +3,11 @@
 if [ "$(uname)." = "Darwin." ]; then
     true;
 else
-    apt-get -y install git
+    sudo apt-get -y install git
 fi
 
 if ! [ -d gtron_devel ]; then
-    git clone git@github.com:NVSL/gtron_devel.git
+    git clone https://github.com/NVSL/gtron_devel.git
 else
     (cd gtron_devel; git pull)
 fi
