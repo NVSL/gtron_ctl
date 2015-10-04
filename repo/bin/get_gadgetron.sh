@@ -36,7 +36,9 @@ source gtron_env.sh
 source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
-if ! [ -e "./Gadgets" -a -e ~/.ssh/id_rsa.pub ]; then
+ls
+
+if ! [ -e "./Gadgets" -a -e "~/.ssh/id_rsa.pub" ]; then
     request "Enter your NVSL lab username:"
     read user
 fi
