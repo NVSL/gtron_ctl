@@ -17,9 +17,9 @@ fi
 
 start_ssh_agent
 
-repo/bin/update_system.sh --install
-repo/bin/setup_gadgetron.sh
-repo/bin/update_gadgetron.sh
+update_system.sh --install
+setup_gadgetron.sh
+update_gadgetron.sh
 
 banner Done!
 
