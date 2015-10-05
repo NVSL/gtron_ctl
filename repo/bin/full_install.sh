@@ -2,8 +2,8 @@
 
 cd ${0%/*}
 
-source repo/lib/install_util.sh
-source repo/lib/install_common.sh
+source ../lib/install_util.sh
+source ../lib/install_common.sh
 
 if ! [ -e "./Gadgets" -a -e "~/.ssh/id_rsa.pub" ]; then
     request "Enter your NVSL lab username:"
