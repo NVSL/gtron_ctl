@@ -18,7 +18,7 @@ function install_system_packages() {
 function install_eagle() {
     # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
 
-    if [ -d /opt/eagle-7.4.0/bin/eagle ]; then
+    if [ -e "/opt/eagle-7.4.0/bin/eagle" ]; then
 	banner "Found existing /opt/eagle-7.4.0/bin/eagle.  Skipping install." | save_log install_eagle
     else
 	banner "Installing Eagle..."
