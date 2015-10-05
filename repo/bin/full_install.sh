@@ -19,6 +19,7 @@ start_ssh_agent
 
 update_system.sh --install
 setup_gadgetron.sh
+activate_gadgetron
 update_gadgetron.sh
 
 banner Done!
