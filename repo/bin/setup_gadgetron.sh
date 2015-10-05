@@ -14,7 +14,7 @@ banner "Setting up local build environment."
 if ! [ -d $GADGETRON_VENV ]; then
     banner "Creating fresh Python virtual environment: $GADGETRON_VENV"
     mkdir -p $GADGETRON_VENV
-    virtualenv $GADGETRON_VENV | redirect venv.log
+    virtualenv $GADGETRON_VENV | save_log create_venv
     newVenv=yes
 fi
 
@@ -23,7 +23,7 @@ source $GADGETRON_VENV/bin/activate
 confirm_venv
 
 banner "Installing local python dependencies"
-pip install -r ../config/local_python.txt | redirect local_python.log
+pip install -r ../config/local_python.txt | save_log local_python
 
 banner "(re)building cgal bindings from git"
 mkdir -p ../build
@@ -34,7 +34,7 @@ mkdir -p ../build
      (cd cgal-bindings; git pull)
  fi
  (cd cgal-bindings; python setup.py install)
-) 2>&1 | redirect ../build/cgal-build.log
+) 2>&1 | save_log build_cgal
 
 banner Success!
 

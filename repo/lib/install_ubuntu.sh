@@ -17,30 +17,43 @@ function install_system_packages() {
 
 function install_eagle() {
     # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
-    banner "Installing Eagle..."
-    (wget -O eagle-lin32-7.4.0.run http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-lin32-7.4.0.run
-     $SUDO bash eagle-lin32-7.4.0.run) | save_log install_eagle
-    
-    request "Eagle is is going to ask you to create a directory.  Say yes, then exit."
 
-    /opt/eagle-7.4.0/bin/eagle |redirect -a ../logs/install_eagle  # click ok about creating the directory.
+    if [ -d /opt/eagle-7.4.0/bin/eagle ]; then
+	banner "Found existing /opt/eagle-7.4.0/bin/eagle.  Skipping install." | save_log install_eagle
+    else
+	banner "Installing Eagle..."
+	(wget -O eagle-lin32-7.4.0.run http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-lin32-7.4.0.run
+	 $SUDO bash eagle-lin32-7.4.0.run) | save_log install_eagle
+
+	request "Eagle is is going to ask you to create a directory.  Say yes, then exit."
+	/opt/eagle-7.4.0/bin/eagle
+    fi
+	
 }
 
 function install_arduino() {
     #Install latest version of arduino:
-    banner "Installing latest version of Arduino..."
-    (wget -O arduino-1.6.4-linux32.tar.xz http://arduino.cc/download.php?f=/arduino-1.6.4-linux32.tar.xz | redirect ../log
-    $SUDO tar xf arduino-1.6.4-linux32.tar.xz -C  /usr/local/ 
-    $SUDO ln -sf /usr/local/arduino-1.6.4/arduino /usr/local/bin/) | save_log install_arduino
+    if [ -e "/usr/local/bin/arduino" ]; then
+	banner "Found existing /usr/local/bin/arduino.  Skipping install." | save_log -a install_GAE
+    else
+	banner "Installing latest version of Arduino..."
+	(wget -O arduino-1.6.4-linux32.tar.xz http://arduino.cc/download.php?f=/arduino-1.6.4-linux32.tar.xz
+	 $SUDO tar xf arduino-1.6.4-linux32.tar.xz -C  /usr/local/ 
+	 $SUDO ln -sf /usr/local/arduino-1.6.4/arduino /usr/local/bin/) | save_log install_arduino
+    fi
 }
 
 function install_GAE() {
-    banner "Installing Google app engine..."
-    
-    (wget -O google_appengine_1.9.26.zip https://storage.googleapis.com/appengine-sdks/featured/google_appengine_1.9.26.zip
-     unzip google_appengine_1.9.26.zip
-     $SUDO mv google_appengine /usr/local/
-     $SUDO bash -c 'echo PATH=\$PATH:/usr/local/google_appengine >> /etc/profile') | save_log install_GAE
+    if [ -d /usr/local/google_appengine ]; then
+	banner "Found exsiting /usr/local/google_appengine. Skipping isntall." | save_log -a install_GAE
+    else
+	banner "Installing Google app engine..."
+	
+	(wget -O google_appengine_1.9.26.zip https://storage.googleapis.com/appengine-sdks/featured/google_appengine_1.9.26.zip
+	 unzip google_appengine_1.9.26.zip
+	 $SUDO mv google_appengine /usr/local/
+	 $SUDO bash -c 'echo PATH=\$PATH:/usr/local/google_appengine >> /etc/profile') | save_log install_GAE
+    fi
 }
 
 

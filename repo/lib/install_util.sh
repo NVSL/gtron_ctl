@@ -49,6 +49,22 @@ function save_log () {
     fi
 }
 
+function redirect () {
+    if [ "$verbose." = "yes." ]; then
+	if [ ".$1" = ".-a" ];then
+	    tee -a $2
+	else
+	    tee $1
+	fi
+    else
+	if [ ".$1" = ".-a" ];then
+	    cat >> $2
+	else
+	    cat > $1
+	fi
+    fi
+}
+
 function get_rcs_proto() {
     if echo $1 | grep -q 'svn+ssh'; then
 	echo "SVN"
@@ -97,14 +113,17 @@ function get_or_update() {
 	 update $p 
      else
 	 checkout $p
-     fi) 2>&1 | redirect update.log
+     fi) 2>&1 | redirect get_or_update.log
+    
     RET=${PIPESTATUS[0]}
     if [ "$RET" != 0 ]; then
 	print_failure FAIL
     else
 	print_success PASS
     fi	
-    do_cmd mv update.log $dir/
+
+    do_cmd mv get_or_update.log $dir
+    
 }
 
 function run_make() {
