@@ -22,6 +22,6 @@ else
 fi
 
 cd gtron_devel
-
+source gtron_env.sh
 repo/bin/full_install.sh
 

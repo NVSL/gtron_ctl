@@ -1,20 +1,9 @@
 #!/usr/bin/env bash
 
-mkdir -p gtron_devel/repo/logs
-if [ -e git_install.log ]; then
-    mv git_install.log gtron_devel/repo/logs/
-fi
-if [ -e checkout_gtron_devel.log ]; then
-    mv checkout_gtron_devel.log gtron_devel/repo/logs/;
-fi
-
-cd gtron_devel
-
-source gtron_env.sh
+cd ${0%/*}
 
 source repo/lib/install_util.sh
 source repo/lib/install_common.sh
-
 
 if ! [ -e "./Gadgets" -a -e "~/.ssh/id_rsa.pub" ]; then
     request "Enter your NVSL lab username:"
