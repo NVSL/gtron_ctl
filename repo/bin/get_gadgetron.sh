@@ -9,8 +9,10 @@
 if [ "$(uname)." = "Darwin." ]; then
     true;
 else
-    echo Installing git...
-    sudo apt-get -y install git > git_install.log
+    if ! which git; then 
+	echo Installing git...
+	sudo apt-get -y install git > git_install.log
+    fi
 fi
 
 if ! [ -d gtron_devel ]; then
@@ -23,5 +25,6 @@ fi
 
 cd gtron_devel
 source gtron_env.sh
+
 repo/bin/full_install.sh
 

@@ -17,12 +17,15 @@ fi
 
 start_ssh_agent
 
-repo/bin/update_system.sh --install
-repo/bin/setup_gadgetron.sh
-repo/bin/update_gadgetron.sh
+update_system.sh --install
+setup_gadgetron.sh
+pushd gtron_devel
+source gtron.env
+popd
+update_gadgetron.sh
 
 banner Done!
 
-request "You need to do 'cd gtron-devel; source gtron_env.sh; activate_gadgetron"
+request "You need to do 'cd gtron_devel; source gtron_env.sh;'"
 
 request "Then you can type ' (cd Gadgets/Tools/jet_2/; make run)' to start jet."
