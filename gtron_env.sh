@@ -5,6 +5,8 @@ CDIR=`pwd`
 export GADGETRON_ROOT=$PWD/Gadgets
 export GADGETRON_VENV=$PWD/repo/venv/Gadgetron
 
+export USE_VENV=yes
+
 #  Setup the PATH
 PATH=$GADGETRON_ROOT/Tools/BOBBuilder:\
 $GADGETRON_ROOT/Tools/EagleUtil:\
