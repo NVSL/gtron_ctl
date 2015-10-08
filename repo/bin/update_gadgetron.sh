@@ -19,7 +19,8 @@ confirm_gadgetron
 confirm_venv
 
 NVSL_GIT=git@github.com:NVSL
-NVSL_SVN=svn+ssh://$user@bbfs-01.calit2.net/grw/Gordon/svn/trunk/Gadgets/
+NVSL_SVN=svn+ssh://${user}@bbfs-01.calit2.net/grw/Gordon/svn/trunk/Gadgets/
+echo "Using svn repo: $NVSL_SVN"
 
 tools="
 $NVSL_SVN/Tools/CircuitsByCode
