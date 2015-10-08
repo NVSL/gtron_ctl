@@ -2,6 +2,11 @@
 
 cd ${0%/*}
 
+if [ ".$1" = "." ]; then
+    echo "usage: setup_gadgetron.sh <bb cluster username>"
+fi 
+echo $1 > repo/config/bb_username.txt
+
 source ../lib/install_util.sh
 
 confirm_gadgetron
