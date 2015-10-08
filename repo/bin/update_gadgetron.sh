@@ -12,11 +12,14 @@ pushd ${0%/*}
 
 source ../lib/install_util.sh
 
+user=$(cat ../config/bb_username.txt)
+echo "Checking under user: $user"
+
 confirm_gadgetron
 confirm_venv
 
 NVSL_GIT=git@github.com:NVSL
-NVSL_SVN=svn+ssh://swanson@bbfs-01.calit2.net/grw/Gordon/svn/branches/swanson/git-migration/Gadgets/
+NVSL_SVN=svn+ssh://$user@bbfs-01.calit2.net/grw/Gordon/svn/branches/swanson/git-migration/Gadgets/
 
 tools="
 $NVSL_SVN/Tools/CircuitsByCode
