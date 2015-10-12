@@ -1,0 +1,293 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+import subprocess
+import os
+import re
+import json
+import pipes
+
+def full_replace(s, vars):
+    from string import Template
+    last = ""
+    new = s
+    while last != new:
+        last = new;
+        new = Template(last).safe_substitute(vars)
+    return new
+
+class TermColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    GREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def in_red(s):
+    return TermColors.FAIL + s + TermColors.ENDC
+def in_green(s):
+    return TermColors.GREEN + s + TermColors.ENDC
+
+class Repo:
+    def __init__(self, json, variables):
+        self.url = full_replace(json["url"], variables)
+        self.container_directory = full_replace(json["directory"], variables)
+        self.repo_directory = re.search(".*/(\w*)(/$)?", self.url).group(1)
+        self.full_directory = os.path.join(self.container_directory,self.repo_directory)
+        self.protocol = "SVN" if re.search("^svn", self.url) is not None else "GIT"
+
+class WorkspaceConfig:
+    def __init__(self,json):
+        self.variables = json["vars"]
+        self.repos = map(lambda x : Repo(x, self.variables), json["repos"])
+
+class Command:
+    @classmethod
+    def setup(cls, subparsers, name, help, description):
+        subparser = subparsers.add_parser(name, help=help, description=description)
+        subparser.set_defaults(func=cls.go)
+        cls.add_args(subparser)
+    @classmethod
+    def add_args(cls, parser):
+        pass
+    
+
+class ParseAndDispatch:
+    def __init__(self, app_desc, subp_title, subp_desc):
+        self.parser = argparse.ArgumentParser(description=app_desc)
+        self.subparsers = self.parser.add_subparsers(title=subp_title,
+                                                     description=subp_desc)
+    def add_command(self, cmd):
+        cmd.setup(self.subparsers, cmd.__name__, cmd.help, cmd.description)
+
+    def parse_args(self, argv):
+        return self.parser.parse_args(argv)
+
+class foo(Command):
+    description="Yeah! Foo!"
+    help="foo on!"
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("true")
+        print "foo"
+
+dry_run = False;
+
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
+    if dry_run is True:
+        print s
+    else:
+        subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
+
+class update_and_build(Command):
+    description="Update and build all the devel directories"
+    help="Update and build all devel directories"
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("update_gadgetron.sh")
+
+class update_system(Command):
+    description="Update system-wide packagess that Gadgetron depends on"
+    help="Update system for Gadgetron"
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("update_system.sh")
+
+class setup_devel(Command):
+    description="Setup the development environment."
+    help="Setup the devel environment.  You should only need to do this once."
+    
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--user", required=False, dest='user', default=os.environ["USER"], help="NVSL username")
+
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("setup_gadgetron.sh {}".format(args.user))
+
+class update(Command):
+    description="Update all the devel directories"
+    help="Get latest updates"
+    
+    @classmethod
+    def go(cls, workspace, args):
+
+        for repo in workspace.repos:
+
+            if not dry_run:
+                preamble = "Update {}: ".format(repo.full_directory)
+                sys.stderr.write(preamble)
+                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+            try:
+                log = open(os.path.join(repo.full_directory, "update.log"), "w")
+                if dry_run:
+                    print "Create directory {}, if needed.".format(repo.container_directory)
+                else:
+                    try: 
+                        os.makedirs(repo.container_directory)
+                    except OSError:
+                        if not os.path.isdir(repo.container_directory):
+                            raise
+
+                if os.path.isdir(repo.full_directory):
+                    if repo.protocol is "SVN":
+                        do_cmd("(cd {}; svn update)".format(repo.full_directory), stdout=log, stderr=log)
+                    else:
+                        do_cmd("(cd {}; git pull)".format(repo.full_directory), stdout=log, stderr=log)
+                else:
+                    if repo.protocol is "SVN":
+                        do_cmd("(cd {}; svn co {})".format(repo.full_directory, repo.url), stdout=log, stderr=log)
+                    else:
+                        do_cmd("(cd {}; git clone {})".format(repo.full_directory, repo.url), stdout=log, stderr=log)
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_green("PASSED")))
+            except Exception as e:
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                
+            
+class update_and_build(Command):
+    description="Update all the devel directories, then build them"
+    help="Get latest updates and build"
+    
+    @classmethod
+    def go(cls, workspace, args):
+        update.go(workspace,args)
+        build.go(workspace,args)                
+            
+class build(Command):
+    description="Run build in all the devel directories"
+    help="Build everything"
+    
+    @classmethod
+    def go(cls, workspace, args):
+        #do_cmd("update_gadgetron.sh build")
+        for repo in workspace.repos:
+
+            if not dry_run:
+                preamble = "Build {}: ".format(repo.full_directory)
+                sys.stderr.write(preamble)
+                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+            try:
+                if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
+                    os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
+                    #print "Building in {}".format(repo.full_directory)
+                    log = open(os.path.join(repo.full_directory, "build.log"), "w")
+                    do_cmd("(cd {}; make clean)".format(repo.full_directory), stdout=log, stderr=log)
+                    do_cmd("(cd {}; make )".format(repo.full_directory), stdout=log, stderr=log)
+                    if not dry_run:
+                        sys.stderr.write(postamble_format.format("", in_green("PASSED")))
+                else:
+                    if not dry_run:
+                        sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
+            except Exception as e:
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+
+class make(Command):
+    description="Run arbitrary 'make' command in each repo"
+    help="Run make everywhere"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("make_args", nargs="*",  default=[], help="Arguments for 'make'")
+
+    @classmethod
+    def go(cls, workspace, args):
+        #do_cmd("update_gadgetron.sh build")
+        for repo in workspace.repos:
+            
+            make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
+            if not dry_run:
+                preamble = "'{}' in {}: ".format(make_cmd, repo.full_directory)
+                sys.stderr.write(preamble)
+                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+            try:
+                if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
+                    os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
+                    log = open(os.path.join(repo.full_directory, "make.log"), "w")
+                    do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd), stdout=log, stderr=log)
+                    if not dry_run:
+                        sys.stderr.write(postamble_format.format("", in_green("SUCCESS")))
+                else:
+                    if not dry_run:
+                        sys.stderr.write(postamble_format.format("", in_green("NO MAKEFILE")))
+            except Exception as e:
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_red("FAILURE")))
+
+
+class list_repos(Command):
+    description="List repositories that are part of this workspace"
+    help="List repositories"
+
+    @classmethod
+    def go(cls, workspace, args):
+        for repo in workspace.repos:
+            print "{}: {}".format(repo.full_directory, repo.url)
+
+class config_lint(Command):
+    description="Parse and writout workspace.json"
+    help="Check config syntax"
+    @classmethod
+    def go(cls, workspace, args):
+        pass
+
+class diff(Command):
+    description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
+    help="Run diff of each repo."
+    @classmethod
+    def go(cls, workspace, args):
+        for repo in workspace.repos:
+            sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+            sys.stdout.flush()
+            if repo.protocol is "SVN":
+                do_cmd("(cd {}; svn diff)".format(repo.full_directory))
+            else:
+                do_cmd("(cd {}; git --no-pager diff)".format(repo.full_directory))
+                
+class status(Command):
+    description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
+    help="Run 'status' on each repo"
+    @classmethod
+    def go(cls, workspace, args):
+        for repo in workspace.repos:
+            sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+            sys.stdout.flush()
+            if repo.protocol is "SVN":
+                do_cmd("(cd {}; svn status)".format(repo.full_directory))
+            else:
+                do_cmd("(cd {}; git status)".format(repo.full_directory))
+                
+def main(argv):
+
+    panda = ParseAndDispatch("Workspace manager for Gadgetron",
+                             "Available commands",
+                             "You can call these")
+    panda.parser.add_argument("-n", dest='dry_run', default=False, action='store_true', help="Just print what would be done")
+    
+    panda.add_command(update)
+    panda.add_command(build)
+    panda.add_command(update_and_build)
+    panda.add_command(diff)
+    panda.add_command(status)
+    panda.add_command(make)
+
+    panda.add_command(update_system)
+    panda.add_command(setup_devel)
+    panda.add_command(list_repos)
+    panda.add_command(config_lint)
+
+    args = panda.parse_args(argv[1:])
+    global dry_run;
+    dry_run = args.dry_run;
+
+    workspace = WorkspaceConfig(json.load(open("repo/config/workspace.json")))
+    args.func(workspace, args)
+    
+if __name__ == "__main__":
+    main(sys.argv)
