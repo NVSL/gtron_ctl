@@ -75,7 +75,7 @@ function get_rcs_proto() {
     fi
 }
 
-function checkout() {
+function do_checkout() {
     RCS=$(get_rcs_proto $1)
     if [ "$RCS" = "GIT" ]; then
 	do_cmd git clone $1
@@ -90,7 +90,7 @@ function get_rcs_dir() {
     echo $dir
 }
 
-function update() {
+function do_update() {
     RCS=$(get_rcs_dir $1)
     if [ -d $RCS/.git ]; then
 	(do_cmd cd $RCS; do_cmd git pull $1)
@@ -110,9 +110,9 @@ function get_or_update() {
 
     do_cmd rm -f update.log
     (if [ -d "$dir" ]; then
-	 update $p 
+	 do_update $p 
      else
-	 checkout $p
+	 do_checkout $p
      fi) 2>&1 | redirect get_or_update.log
     
     RET=${PIPESTATUS[0]}

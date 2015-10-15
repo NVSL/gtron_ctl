@@ -41,9 +41,12 @@ class Repo:
         self.protocol = "SVN" if re.search("^svn", self.url) is not None else "GIT"
 
 class WorkspaceConfig:
-    def __init__(self,json):
-        self.variables = json["vars"]
-        self.repos = map(lambda x : Repo(x, self.variables), json["repos"])
+    def __init__(self,devel_root, config_file):
+        json_data = json.load(open(config_file))
+        self.config_file = config_file
+        self.devel_root = devel_root
+        self.variables = json_data["vars"]
+        self.repos = map(lambda x : Repo(x, self.variables), json_data["repos"])
 
 class Command:
     @classmethod
@@ -262,13 +265,37 @@ class status(Command):
                 do_cmd("(cd {}; svn status)".format(repo.full_directory))
             else:
                 do_cmd("(cd {}; git status)".format(repo.full_directory))
-                
+
+def sanity(workspace):
+    if os.environ.get("GADGETRON_ROOT") is None:
+        print "$GADGETRON_ROOT is not set."
+        return False;
+    if os.path.dirname(os.environ.get("GADGETRON_ROOT")) != workspace.devel_root:
+        print "$GADGETRON_ROOT ({}) doesn't correspond to this workspace's root ({}).".format(os.environ["GADGETRON_ROOT"], workspace.devel_root)
+        return False
+    if os.path.dirname(sys.executable) != os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin"):
+        print os.path.dirname(sys.executable)
+        print os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin")
+        print "Python executable ({}) is not in workspace virtual environment ({})".format(sys.executable, os.path.join(workspace.devel_root, "repo","venv","Gadgetron"))
+        return False
+    return True;
+    
 def main(argv):
 
     panda = ParseAndDispatch("Workspace manager for Gadgetron",
                              "Available commands",
                              "You can call these")
     panda.parser.add_argument("-n", dest='dry_run', default=False, action='store_true', help="Just print what would be done")
+
+    dev_root = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..",".."))
+    panda.parser.add_argument("--root",
+                              dest='devel_root',
+                              default=dev_root,
+                              help="Workspace root.  Default: {}".format(dev_root))
+    config = os.path.join(dev_root,"repo","config","workspace.json")
+
+    panda.parser.add_argument("--config", dest='config_file', default=config, help="Configuration file to use.  Default: {}".format(config))
+    panda.parser.add_argument("--force", dest='force', default=False, action="store_true", help="Perform actions even if your configuration seems strange")
     
     panda.add_command(update)
     panda.add_command(build)
@@ -286,7 +313,15 @@ def main(argv):
     global dry_run;
     dry_run = args.dry_run;
 
-    workspace = WorkspaceConfig(json.load(open("repo/config/workspace.json")))
+    workspace = WorkspaceConfig(args.devel_root, args.config_file)
+    if not sanity(workspace):
+        if args.force:
+            print "Continuing despite misconfiguration"
+        else:
+            print "Quiting, due to misconfiguration"
+            sys.exit(1);
+            
+    os.chdir(workspace.devel_root);
     args.func(workspace, args)
     
 if __name__ == "__main__":

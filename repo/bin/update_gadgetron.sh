@@ -2,6 +2,12 @@
 
 pushd ${0%/*}
 
+if [ ".$1" = "." ];then
+    steps="get_or_update build"
+else
+    steps="$1 $2 $3"
+fi
+    
 # Envisioned workload:
 #  1.  Create a new development direcotry: 'mkdir Gadgetron'
 #  2.  git clone git@github.com:NVSL/gadgetron-setup.git
@@ -78,7 +84,11 @@ do_cmd mkdir -p $LIB_DIR
 TOOL_DIR=$GADGETRON_ROOT/Tools
 do_cmd mkdir -p $TOOL_DIR
 
-for step in get_or_update build;do 
+function update() {
+    get_or_update "$@" 
+}
+
+for step in $steps;do 
 
     banner "Performing $step"
     
