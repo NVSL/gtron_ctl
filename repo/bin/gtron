@@ -389,6 +389,13 @@ class status(Command):
             else:
                 do_cmd("(cd {}; git status)".format(repo.full_directory))
 
+class sanity_check(Command):
+    description="Run a sanity check on the environment"
+    help="Run sanity check"
+    @classmethod
+    def go(cls, workspace, args):
+        pass # it's a noop, becaue we always run a sanity check.
+
 
 def sanity(workspace):
 
@@ -432,6 +439,7 @@ def main(argv):
     panda.add_command(make)
     panda.add_command(add_repo)
     panda.add_command(remove_repo)
+    panda.add_command(sanity_check)
 
     panda.add_command(update_system)
     panda.add_command(setup_devel)

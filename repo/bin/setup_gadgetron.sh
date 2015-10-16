@@ -5,7 +5,8 @@ cd ${0%/*}
 if [ ".$1" = "." ]; then
     echo "usage: setup_gadgetron.sh <bb cluster username>"
 fi 
-echo $1 > ../config/bb_username.txt
+
+gtron config_set user $1
 
 source ../lib/install_util.sh
 
