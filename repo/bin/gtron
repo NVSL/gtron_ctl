@@ -7,15 +7,7 @@ import os
 import re
 import json
 import pipes
-
-def full_replace(s, vars):
-    from string import Template
-    last = ""
-    new = s
-    while last != new:
-        last = new;
-        new = Template(last).safe_substitute(vars)
-    return new
+import shutil
 
 class TermColors:
     HEADER = '\033[95m'
@@ -33,21 +25,67 @@ def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
 
 class Repo:
-    def __init__(self, json, variables):
-        self.url = full_replace(json["url"], variables)
-        self.container_directory = full_replace(json["directory"], variables)
+    def __init__(self, json):
+        self.url = json["url"]
+        self.container_directory = json["directory"]
         self.repo_directory = re.search(".*/(\w*)(/$)?", self.url).group(1)
         self.full_directory = os.path.join(self.container_directory,self.repo_directory)
         self.protocol = "SVN" if re.search("^svn", self.url) is not None else "GIT"
 
+    def to_json(self):
+        return {"url": self.url,
+                "directory": self.container_directory}
+
+    def expand_variables(self, workspace):
+        self.url = full_replace(self.url, variables)
+        self.container_directory = workspace.eval_with_variables(self.container_directory)
+        self.repo_directory = workspace.eval_with_variables(self.repo_directory)
+        self.full_directory = workspace.eval_with_variables(self.full_directory)
+        
 class WorkspaceConfig:
     def __init__(self,devel_root, config_file):
         json_data = json.load(open(config_file))
         self.config_file = config_file
         self.devel_root = devel_root
+        
         self.variables = json_data["vars"]
-        self.repos = map(lambda x : Repo(x, self.variables), json_data["repos"])
+        self.repos = map(lambda x : Repo(x), json_data["repos"])
 
+    def to_json(self):
+        return {"vars" : self.variables,
+                "repos" : [r.to_json() for r in self.repos]}
+
+    def expand_variables(self):
+        for v in self.variables:
+            self.variables[v] = self.eval_with_variables(self.variables[v], self.variables)
+        for r in self.repos:
+            r.expand_variables(self.variables)
+
+    def write_config_to_file(self, file):
+        json.dump(self.to_json(),
+                  file,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))        
+
+    def dump(self):
+        self.write_config_to_file(sys.stdout)
+        
+    def write_config(self):
+        shutil.copyfile(self.config_file, self.config_file + ".bak")
+        self.write_config_to_file(open(self.config_file, "w"))
+
+    def eval_with_variables(self, s):
+        from string import Template
+        last = ""
+        new = s
+        while last != new:
+            last = new;
+            new = Template(last).safe_substitute(vars)
+        return new
+
+
+        
 class Command:
     @classmethod
     def setup(cls, subparsers, name, help, description):
@@ -57,7 +95,6 @@ class Command:
     @classmethod
     def add_args(cls, parser):
         pass
-    
 
 class ParseAndDispatch:
     def __init__(self, app_desc, subp_title, subp_desc):
@@ -70,13 +107,6 @@ class ParseAndDispatch:
     def parse_args(self, argv):
         return self.parser.parse_args(argv)
 
-class foo(Command):
-    description="Yeah! Foo!"
-    help="foo on!"
-    @classmethod
-    def go(cls, workspace, args):
-        do_cmd("true")
-        print "foo"
 
 dry_run = False;
 
@@ -86,12 +116,6 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     else:
         subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
 
-class update_and_build(Command):
-    description="Update and build all the devel directories"
-    help="Update and build all devel directories"
-    @classmethod
-    def go(cls, workspace, args):
-        do_cmd("update_gadgetron.sh")
 
 class update_system(Command):
     description="Update system-wide packagess that Gadgetron depends on"
@@ -118,7 +142,7 @@ class update(Command):
     
     @classmethod
     def go(cls, workspace, args):
-
+        workspace.expand_variables()
         for repo in workspace.repos:
 
             if not dry_run:
@@ -169,6 +193,7 @@ class build(Command):
     @classmethod
     def go(cls, workspace, args):
         #do_cmd("update_gadgetron.sh build")
+        workspace.expand_variables()
         for repo in workspace.repos:
 
             if not dry_run:
@@ -202,6 +227,7 @@ class make(Command):
     @classmethod
     def go(cls, workspace, args):
         #do_cmd("update_gadgetron.sh build")
+        workspace.expand_variables()
         for repo in workspace.repos:
             
             make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
@@ -240,11 +266,107 @@ class config_lint(Command):
     def go(cls, workspace, args):
         pass
 
+class config_set(Command):
+    description="Set variable value in config file"
+    help="Set variable in config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("kv", nargs=2, metavar=("variable", "value"), help="Set <variable>=<value>")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.variables[args.kv[0]] = args.kv[1]
+        workspace.write_config()
+
+class add_repo(Command):
+    description="Add a repository to checkout as part of this workspace"
+    help="Add a repository"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--repo", required=True, dest="repo", help="Repository URL")
+        parser.add_argument("--directory", required=True, dest="directory", help="Directory where the repo should live")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.repos.append(Repo({"url": args.repo, "directory":args.directory}))
+        workspace.write_config()
+
+class remove_repo(Command):
+    description="Remove a repository to checkout as part of this workspace"
+    help="Remove a repository"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--directory", required=True, dest="directory", help="Directory holds the contents of the repo")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        found = False
+        for i in range(0, len(workspace.repos)):
+            if workspace.eval_with_variables(workspace.repos[i].full_directory) == args.directory:
+                del workspace.repos[i]
+                found = True
+                break;
+        if not found:
+            print "Couldn't find repo that lives in {}.".format(args.directory)
+            sys.exit(1)
+        workspace.write_config()
+
+class config_unset(Command):
+    description="Remove variable from config file"
+    help="Remove variable from config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("k", metavar="variable", help="Variable to remove")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        if args.k in workspace.variables:
+            del workspace.variables[args.k]
+        workspace.write_config()
+
+class config_cleanup(Command):
+    description="Reformat config file"
+    help="Reformat config file"
+    @classmethod
+    def go(cls, workspace, args):
+        shutil.copyfile(workspace.config_file, workspace.config_file + ".bak")
+        json.dump(workspace.to_json(), sys.stdout,#open(workspace.config_file, "w"))
+                       sort_keys=True,
+                       indent=4,
+                       separators=(',', ': '))
+        workspace.expand_variables()
+        json.dump(workspace.to_json(), sys.stdout,#open(workspace.config_file, "w"))
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
+
+class config_dump(Command):
+    description="Parse, re-serialize, and print config file"
+    help="Print config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--expand", required=False,  default=False, action="store_true", dest="expand", help="Expand all variables")
+
+    @classmethod
+    def go(cls, workspace, args):
+        if args.expand:
+            workspace.expand_variables()
+        json.dump(workspace.to_json(), sys.stdout,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(', ', ' : '))
+
 class diff(Command):
     description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
     help="Run diff of each repo."
     @classmethod
     def go(cls, workspace, args):
+        workspace.expand_variables()
         for repo in workspace.repos:
             sys.stdout.write("{:=^80}\n".format(repo.full_directory))
             sys.stdout.flush()
@@ -258,6 +380,7 @@ class status(Command):
     help="Run 'status' on each repo"
     @classmethod
     def go(cls, workspace, args):
+        workspace.expand_variables()
         for repo in workspace.repos:
             sys.stdout.write("{:=^80}\n".format(repo.full_directory))
             sys.stdout.flush()
@@ -266,7 +389,10 @@ class status(Command):
             else:
                 do_cmd("(cd {}; git status)".format(repo.full_directory))
 
+
 def sanity(workspace):
+
+    #workspace.expand_variables()
     if os.environ.get("GADGETRON_ROOT") is None:
         print "$GADGETRON_ROOT is not set."
         return False;
@@ -296,6 +422,7 @@ def main(argv):
 
     panda.parser.add_argument("--config", dest='config_file', default=config, help="Configuration file to use.  Default: {}".format(config))
     panda.parser.add_argument("--force", dest='force', default=False, action="store_true", help="Perform actions even if your configuration seems strange")
+    panda.parser.add_argument("--dump-after", dest='dump', default=False, action="store_true", help="Dump the contents of the config file after completing the command")
     
     panda.add_command(update)
     panda.add_command(build)
@@ -303,12 +430,18 @@ def main(argv):
     panda.add_command(diff)
     panda.add_command(status)
     panda.add_command(make)
+    panda.add_command(add_repo)
+    panda.add_command(remove_repo)
 
     panda.add_command(update_system)
     panda.add_command(setup_devel)
     panda.add_command(list_repos)
     panda.add_command(config_lint)
-
+    panda.add_command(config_cleanup)
+    panda.add_command(config_set)
+    panda.add_command(config_unset)
+    panda.add_command(config_dump)
+    
     args = panda.parse_args(argv[1:])
     global dry_run;
     dry_run = args.dry_run;
@@ -323,6 +456,7 @@ def main(argv):
             
     os.chdir(workspace.devel_root);
     args.func(workspace, args)
-    
+    if args.dump:
+        workspace.dump()
 if __name__ == "__main__":
     main(sys.argv)
