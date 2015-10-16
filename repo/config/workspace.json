@@ -1,0 +1,125 @@
+{
+    "repos": [
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/CircuitsByCode"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/BOBBuilder "
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/gadgetron-vm-util"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/EagleUtil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/gcam"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/AutomaKit"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Dingo"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Koala"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/dummysch"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/util"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/SVGUtil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/EagleArt"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Checkers"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/GCompiler"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/GadgetMaker2"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/laserTurtle"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/CaseMaker"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Checkers"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Dingo"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/Eagle"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/SVGUtil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/util"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/rpiutil"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_SVN/Libraries/Parts"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_SVN/Libraries/CAM"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_SVN/Designs/GadgetronSketchBook"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_SVN/Libraries/Components"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "url": "$NVSL_SVN/Designs/testGadget"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_SVN/Tools/jet_2"
+        }
+    ],
+    "vars": {
+        "NVSL_GIT": "git@github.com:NVSL",
+        "NVSL_SVN": "svn+ssh://${user}@bbfs-01.calit2.net/grw/Gordon/svn/trunk/Gadgets",
+        "user": "swanson"
+    }
+}
