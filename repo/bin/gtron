@@ -37,7 +37,7 @@ class Repo:
                 "directory": self.container_directory}
 
     def expand_variables(self, workspace):
-        self.url = full_replace(self.url, variables)
+        self.url = workspace.eval_with_variables(self.url)
         self.container_directory = workspace.eval_with_variables(self.container_directory)
         self.repo_directory = workspace.eval_with_variables(self.repo_directory)
         self.full_directory = workspace.eval_with_variables(self.full_directory)
@@ -57,9 +57,9 @@ class WorkspaceConfig:
 
     def expand_variables(self):
         for v in self.variables:
-            self.variables[v] = self.eval_with_variables(self.variables[v], self.variables)
+            self.variables[v] = self.eval_with_variables(self.variables[v])
         for r in self.repos:
-            r.expand_variables(self.variables)
+            r.expand_variables(self)
 
     def write_config_to_file(self, file):
         json.dump(self.to_json(),
@@ -81,7 +81,7 @@ class WorkspaceConfig:
         new = s
         while last != new:
             last = new;
-            new = Template(last).safe_substitute(vars)
+            new = Template(last).safe_substitute(self.variables)
         return new
 
 
