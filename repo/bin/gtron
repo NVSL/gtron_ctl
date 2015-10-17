@@ -28,7 +28,7 @@ class Repo:
     def __init__(self, json):
         self.url = json["url"]
         self.container_directory = json["directory"]
-        self.repo_directory = re.search(".*/(\w*)(/$)?", self.url).group(1)
+        self.repo_directory = re.search(".*/([\w\-]*)(/$)?", self.url).group(1)
         self.full_directory = os.path.join(self.container_directory,self.repo_directory)
         self.protocol = "SVN" if re.search("^svn", self.url) is not None else "GIT"
 
@@ -47,18 +47,33 @@ class WorkspaceConfig:
         json_data = json.load(open(config_file))
         self.config_file = config_file
         self.devel_root = devel_root
-        
         self.variables = json_data["vars"]
-        self.repos = map(lambda x : Repo(x), json_data["repos"])
+        self.repo_map = {r.full_directory: r for r in map(lambda x : Repo(x), json_data["repos"])}
 
+    def repos(self):
+        return self.repo_map.itervalues();
+
+    def add_repo(self, r):
+        self.repo_map[r.full_directory] = r
+
+    def remove_repo(self, r):
+        del self.repo_map[r]
+
+    def get_repo(self, directory):
+        if directory[-1] == "/":
+            d = directory[0:-1]
+        else:
+            d = directory
+        return self.repo_map.get(d)
+    
     def to_json(self):
         return {"vars" : self.variables,
-                "repos" : [r.to_json() for r in self.repos]}
+                "repos" : [r.to_json() for r in self.repos()]}
 
     def expand_variables(self):
         for v in self.variables:
             self.variables[v] = self.eval_with_variables(self.variables[v])
-        for r in self.repos:
+        for r in self.repos():
             r.expand_variables(self)
 
     def write_config_to_file(self, file):
@@ -136,45 +151,71 @@ class setup_devel(Command):
     def go(cls, workspace, args):
         do_cmd("setup_gadgetron.sh {}".format(args.user))
 
-class update(Command):
+class DirectoryCommand(Command):
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--dir", required=False, nargs="+", dest='directories', default=None, help="Directories to operate on (default: all of them)")
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.expand_variables()
+        if args.directories is None:
+            repo_list = workspace.repos()
+        else:
+            repo_list = []
+            for d in args.directories:
+                r = workspace.get_repo(d)
+                if r is None:
+                    print "Couldn't find repo/directory for '{}'.".format(d)
+                    sys.exit(1)
+                else:
+                    repo_list.append(r)
+            
+        for repo in repo_list:
+            cls.directory_op(repo, workspace, args)
+        
+class update(DirectoryCommand):
     description="Update all the devel directories"
     help="Get latest updates"
     
     @classmethod
-    def go(cls, workspace, args):
-        workspace.expand_variables()
-        for repo in workspace.repos:
+    def directory_op(cls, repo, workspace, args):
+        if not dry_run:
+            preamble = "Update {}: ".format(repo.full_directory)
+            sys.stderr.write(preamble)
+            postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+        try:
+            log = open(os.path.join(repo.container_directory, repo.repo_directory + "-update.log"), "w")
+            if dry_run:
+                print "Create directory {}, if needed.".format(repo.container_directory)
+            else:
+                try:
+                    #print "Making directory {}".format(repo.container_directory)
+                    os.makedirs(repo.container_directory)
+                except OSError:
+                    if not os.path.isdir(repo.container_directory):
+                        print "Couldn't make directory {}".format(repo.container_directory)
+                        raise
 
+            if os.path.isdir(repo.full_directory):
+                if repo.protocol is "SVN":
+                    do_cmd("(cd {}; svn update)".format(repo.full_directory), stdout=log, stderr=log)
+                else:
+                    do_cmd("(cd {}; git pull)".format(repo.full_directory), stdout=log, stderr=log)
+            else:
+                if repo.protocol is "SVN":
+                    do_cmd("(cd {}; svn co {})".format(repo.container_directory, repo.url), stdout=log, stderr=log)
+                else:
+                    do_cmd("(cd {}; git clone {})".format(repo.container_directory, repo.url), stdout=log, stderr=log)
             if not dry_run:
-                preamble = "Update {}: ".format(repo.full_directory)
-                sys.stderr.write(preamble)
-                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
-            try:
-                log = open(os.path.join(repo.full_directory, "update.log"), "w")
-                if dry_run:
-                    print "Create directory {}, if needed.".format(repo.container_directory)
-                else:
-                    try: 
-                        os.makedirs(repo.container_directory)
-                    except OSError:
-                        if not os.path.isdir(repo.container_directory):
-                            raise
-
-                if os.path.isdir(repo.full_directory):
-                    if repo.protocol is "SVN":
-                        do_cmd("(cd {}; svn update)".format(repo.full_directory), stdout=log, stderr=log)
-                    else:
-                        do_cmd("(cd {}; git pull)".format(repo.full_directory), stdout=log, stderr=log)
-                else:
-                    if repo.protocol is "SVN":
-                        do_cmd("(cd {}; svn co {})".format(repo.full_directory, repo.url), stdout=log, stderr=log)
-                    else:
-                        do_cmd("(cd {}; git clone {})".format(repo.full_directory, repo.url), stdout=log, stderr=log)
-                if not dry_run:
-                    sys.stderr.write(postamble_format.format("", in_green("PASSED")))
-            except Exception as e:
-                if not dry_run:
-                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                sys.stderr.write(postamble_format.format("", in_green("PASSED")))
+                log.close();
+                shutil.move(os.path.join(repo.container_directory, repo.repo_directory + "-update.log"),
+                            os.path.join(repo.container_directory, repo.repo_directory, "update.log"))
+        except Exception as e:
+            print e
+            if not dry_run:
+                sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+            raise e
                 
             
 class update_and_build(Command):
@@ -186,68 +227,61 @@ class update_and_build(Command):
         update.go(workspace,args)
         build.go(workspace,args)                
             
-class build(Command):
+class build(DirectoryCommand):
     description="Run build in all the devel directories"
     help="Build everything"
     
     @classmethod
-    def go(cls, workspace, args):
-        #do_cmd("update_gadgetron.sh build")
-        workspace.expand_variables()
-        for repo in workspace.repos:
-
-            if not dry_run:
-                preamble = "Build {}: ".format(repo.full_directory)
-                sys.stderr.write(preamble)
-                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
-            try:
-                if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
-                    os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
-                    #print "Building in {}".format(repo.full_directory)
-                    log = open(os.path.join(repo.full_directory, "build.log"), "w")
-                    do_cmd("(cd {}; make clean)".format(repo.full_directory), stdout=log, stderr=log)
-                    do_cmd("(cd {}; make )".format(repo.full_directory), stdout=log, stderr=log)
-                    if not dry_run:
-                        sys.stderr.write(postamble_format.format("", in_green("PASSED")))
-                else:
-                    if not dry_run:
-                        sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
-            except Exception as e:
+    def directory_op(cls, repo, workspace, args):
+        if not dry_run:
+            preamble = "Build {}: ".format(repo.full_directory)
+            sys.stderr.write(preamble)
+            postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+        try:
+            if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
+                os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
+                #print "Building in {}".format(repo.full_directory)
+                log = open(os.path.join(repo.full_directory, "build.log"), "w")
+                do_cmd("(cd {}; make clean)".format(repo.full_directory), stdout=log, stderr=log)
+                do_cmd("(cd {}; make )".format(repo.full_directory), stdout=log, stderr=log)
                 if not dry_run:
-                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                    sys.stderr.write(postamble_format.format("", in_green("PASSED")))
+            else:
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
+        except Exception as e:
+            if not dry_run:
+                sys.stderr.write(postamble_format.format("", in_red("FAILED")))
 
-class make(Command):
+class make(DirectoryCommand):
     description="Run arbitrary 'make' command in each repo"
     help="Run make everywhere"
 
     @classmethod
     def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
         parser.add_argument("make_args", nargs="*",  default=[], help="Arguments for 'make'")
 
     @classmethod
-    def go(cls, workspace, args):
-        #do_cmd("update_gadgetron.sh build")
-        workspace.expand_variables()
-        for repo in workspace.repos:
-            
-            make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
-            if not dry_run:
-                preamble = "'{}' in {}: ".format(make_cmd, repo.full_directory)
-                sys.stderr.write(preamble)
-                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
-            try:
-                if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
-                    os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
-                    log = open(os.path.join(repo.full_directory, "make.log"), "w")
-                    do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd), stdout=log, stderr=log)
-                    if not dry_run:
-                        sys.stderr.write(postamble_format.format("", in_green("SUCCESS")))
-                else:
-                    if not dry_run:
-                        sys.stderr.write(postamble_format.format("", in_green("NO MAKEFILE")))
-            except Exception as e:
+    def directory_op(cls, repo, workspace, args):
+        make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
+        if not dry_run:
+            preamble = "'{}' in {}: ".format(make_cmd, repo.full_directory)
+            sys.stderr.write(preamble)
+            postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+        try:
+            if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
+                os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
+                log = open(os.path.join(repo.full_directory, "make.log"), "w")
+                do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd), stdout=log, stderr=log)
                 if not dry_run:
-                    sys.stderr.write(postamble_format.format("", in_red("FAILURE")))
+                    sys.stderr.write(postamble_format.format("", in_green("SUCCESS")))
+            else:
+                if not dry_run:
+                    sys.stderr.write(postamble_format.format("", in_green("NO MAKEFILE")))
+        except Exception as e:
+            if not dry_run:
+                sys.stderr.write(postamble_format.format("", in_red("FAILURE")))
 
 
 class list_repos(Command):
@@ -256,7 +290,7 @@ class list_repos(Command):
 
     @classmethod
     def go(cls, workspace, args):
-        for repo in workspace.repos:
+        for repo in workspace.repos():
             print "{}: {}".format(repo.full_directory, repo.url)
 
 class config_lint(Command):
@@ -290,7 +324,7 @@ class add_repo(Command):
         
     @classmethod
     def go(cls, workspace, args):
-        workspace.repos.append(Repo({"url": args.repo, "directory":args.directory}))
+        workspace.add_repo(Repo({"url": args.repo, "directory":args.directory}))
         workspace.write_config()
 
 class remove_repo(Command):
@@ -304,12 +338,9 @@ class remove_repo(Command):
     @classmethod
     def go(cls, workspace, args):
         found = False
-        for i in range(0, len(workspace.repos)):
-            if workspace.eval_with_variables(workspace.repos[i].full_directory) == args.directory:
-                del workspace.repos[i]
-                found = True
-                break;
-        if not found:
+        if workspace.get_repo(args.directory) is not None:
+            workspace.remove_repo(args.directory)
+        else:
             print "Couldn't find repo that lives in {}.".format(args.directory)
             sys.exit(1)
         workspace.write_config()
@@ -361,33 +392,29 @@ class config_dump(Command):
                   indent=4,
                   separators=(', ', ' : '))
 
-class diff(Command):
+class diff(DirectoryCommand):
     description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
     help="Run diff of each repo."
     @classmethod
-    def go(cls, workspace, args):
-        workspace.expand_variables()
-        for repo in workspace.repos:
-            sys.stdout.write("{:=^80}\n".format(repo.full_directory))
-            sys.stdout.flush()
-            if repo.protocol is "SVN":
-                do_cmd("(cd {}; svn diff)".format(repo.full_directory))
-            else:
-                do_cmd("(cd {}; git --no-pager diff)".format(repo.full_directory))
+    def directory_op(cls, repo, workspace, args):
+        sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+        sys.stdout.flush()
+        if repo.protocol is "SVN":
+            do_cmd("(cd {}; svn diff)".format(repo.full_directory))
+        else:
+            do_cmd("(cd {}; git --no-pager diff)".format(repo.full_directory))
                 
-class status(Command):
+class status(DirectoryCommand):
     description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
     help="Run 'status' on each repo"
     @classmethod
-    def go(cls, workspace, args):
-        workspace.expand_variables()
-        for repo in workspace.repos:
-            sys.stdout.write("{:=^80}\n".format(repo.full_directory))
-            sys.stdout.flush()
-            if repo.protocol is "SVN":
-                do_cmd("(cd {}; svn status)".format(repo.full_directory))
-            else:
-                do_cmd("(cd {}; git status)".format(repo.full_directory))
+    def directory_op(cls, repo, workspace, args):
+        sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+        sys.stdout.flush()
+        if repo.protocol is "SVN":
+            do_cmd("(cd {}; svn status)".format(repo.full_directory))
+        else:
+            do_cmd("(cd {}; git status)".format(repo.full_directory))
 
 class sanity_check(Command):
     description="Run a sanity check on the environment"
