@@ -25,16 +25,23 @@ def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
 
 class Repo:
-    def __init__(self, json):
+    def __init__(self, json, count):
         self.url = json["url"]
         self.container_directory = json["directory"]
         self.repo_directory = re.search(".*/([\w\-]*)(/$)?", self.url).group(1)
         self.full_directory = os.path.join(self.container_directory,self.repo_directory)
-        self.protocol = "SVN" if re.search("^svn", self.url) is not None else "GIT"
-
+        self.stored_order = json.get("order")
+        if self.stored_order is None:
+            self.sort_by = count;
+        else:
+            self.sort_by = self.stored_order
+            
     def to_json(self):
-        return {"url": self.url,
-                "directory": self.container_directory}
+        r =  {"url": self.url,
+              "directory": self.container_directory}
+        if self.stored_order is not None:
+            r["order"] = self.stored_order
+        return r
 
     def expand_variables(self, workspace):
         self.url = workspace.eval_with_variables(self.url)
@@ -48,10 +55,19 @@ class WorkspaceConfig:
         self.config_file = config_file
         self.devel_root = devel_root
         self.variables = json_data["vars"]
-        self.repo_map = {r.full_directory: r for r in map(lambda x : Repo(x), json_data["repos"])}
+        order = 500;
+        
+        self.repo_map = {}
+        for r in json_data["repos"]:
+            n = Repo(r, order);
+            self.repo_map[n.full_directory] = n
+            order = order + 1
 
+    def normalize_path(self, path):
+        return os.path.realpath(path).replace(self.devel_root+"/","")
+            
     def repos(self):
-        return self.repo_map.itervalues();
+        return sorted(self.repo_map.itervalues(), cmp=lambda x,y: cmp(x.sort_by, y.sort_by));
 
     def add_repo(self, r):
         self.repo_map[r.full_directory] = r
@@ -60,10 +76,13 @@ class WorkspaceConfig:
         del self.repo_map[r]
 
     def get_repo(self, directory):
+        directory = self.normalize_path(directory)
+
         if directory[-1] == "/":
             d = directory[0:-1]
         else:
             d = directory
+
         return self.repo_map.get(d)
     
     def to_json(self):
@@ -154,11 +173,11 @@ class setup_devel(Command):
 class DirectoryCommand(Command):
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--dir", required=False, nargs="+", dest='directories', default=None, help="Directories to operate on (default: all of them)")
+        parser.add_argument("directories", nargs="*", help="Directories to operate on (default: all of them)")
     @classmethod
     def go(cls, workspace, args):
         workspace.expand_variables()
-        if args.directories is None:
+        if len(args.directories) == 0:
             repo_list = workspace.repos()
         else:
             repo_list = []
@@ -169,7 +188,7 @@ class DirectoryCommand(Command):
                     sys.exit(1)
                 else:
                     repo_list.append(r)
-            
+
         for repo in repo_list:
             cls.directory_op(repo, workspace, args)
         
@@ -184,33 +203,38 @@ class update(DirectoryCommand):
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
-            log = open(os.path.join(repo.container_directory, repo.repo_directory + "-update.log"), "w")
+            log = open(os.path.join(workspace.devel_root,
+                                    repo.container_directory,
+                                    repo.repo_directory + "-update.log"), "w")
             if dry_run:
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
                 try:
                     #print "Making directory {}".format(repo.container_directory)
-                    os.makedirs(repo.container_directory)
+                    os.makedirs(os.path.join(workspace.devel_root, repo.container_directory))
                 except OSError:
-                    if not os.path.isdir(repo.container_directory):
+                    if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
                         print "Couldn't make directory {}".format(repo.container_directory)
                         raise
 
-            if os.path.isdir(repo.full_directory):
-                if repo.protocol is "SVN":
-                    do_cmd("(cd {}; svn update)".format(repo.full_directory), stdout=log, stderr=log)
+            protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+            if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
+                #print "Directory exists...updating"
+                if protocol is "SVN":
+                    do_cmd("(cd {}; svn update)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
                 else:
-                    do_cmd("(cd {}; git pull)".format(repo.full_directory), stdout=log, stderr=log)
+                    do_cmd("(cd {}; git pull)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
             else:
-                if repo.protocol is "SVN":
-                    do_cmd("(cd {}; svn co {})".format(repo.container_directory, repo.url), stdout=log, stderr=log)
+                print "Directory doesn't exist...checking out"
+                if protocol is "SVN":
+                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root, repo.full_directory), repo.url), stdout=log, stderr=log)
                 else:
-                    do_cmd("(cd {}; git clone {})".format(repo.container_directory, repo.url), stdout=log, stderr=log)
+                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root, repo.full_directory), repo.url), stdout=log, stderr=log)
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_green("PASSED")))
                 log.close();
-                shutil.move(os.path.join(repo.container_directory, repo.repo_directory + "-update.log"),
-                            os.path.join(repo.container_directory, repo.repo_directory, "update.log"))
+                shutil.move(os.path.join(workspace.devel_root, repo.container_directory, repo.repo_directory + "-update.log"),
+                            os.path.join(workspace.devel_root, repo.container_directory, repo.repo_directory, "update.log"))
         except Exception as e:
             print e
             if not dry_run:
@@ -238,12 +262,14 @@ class build(DirectoryCommand):
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
-            if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
-                os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
+            if (os.path.exists(os.path.join(workspace.devel_root, repo.full_directory, "makefile")) or
+                os.path.exists(os.path.join(workspace.devel_root, repo.full_directory, "Makefile"))):
                 #print "Building in {}".format(repo.full_directory)
-                log = open(os.path.join(repo.full_directory, "build.log"), "w")
-                do_cmd("(cd {}; make clean)".format(repo.full_directory), stdout=log, stderr=log)
-                do_cmd("(cd {}; make )".format(repo.full_directory), stdout=log, stderr=log)
+                log = open(os.path.join(workspace.devel_root,
+                                        repo.full_directory,
+                                        "build.log"), "w")
+                do_cmd("(cd {}; make clean)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
+                do_cmd("(cd {}; make )".format(os.path.joir(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
                 if not dry_run:
                     sys.stderr.write(postamble_format.format("", in_green("PASSED")))
             else:
@@ -260,7 +286,7 @@ class make(DirectoryCommand):
     @classmethod
     def add_args(cls, parser):
         DirectoryCommand.add_args(parser)
-        parser.add_argument("make_args", nargs="*",  default=[], help="Arguments for 'make'")
+        parser.add_argument("--args", nargs="+",  dest='make_args', default=[], help="Arguments for 'make'")
 
     @classmethod
     def directory_op(cls, repo, workspace, args):
@@ -272,7 +298,9 @@ class make(DirectoryCommand):
         try:
             if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
                 os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
-                log = open(os.path.join(repo.full_directory, "make.log"), "w")
+                log = open(os.path.join(workspace.devel_root,
+                                        repo.full_directory,
+                                        "make.log"), "w")
                 do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd), stdout=log, stderr=log)
                 if not dry_run:
                     sys.stderr.write(postamble_format.format("", in_green("SUCCESS")))
@@ -365,12 +393,12 @@ class config_cleanup(Command):
     @classmethod
     def go(cls, workspace, args):
         shutil.copyfile(workspace.config_file, workspace.config_file + ".bak")
-        json.dump(workspace.to_json(), sys.stdout,#open(workspace.config_file, "w"))
+        json.dump(workspace.to_json(), sys.stdout,
                        sort_keys=True,
                        indent=4,
                        separators=(',', ': '))
         workspace.expand_variables()
-        json.dump(workspace.to_json(), sys.stdout,#open(workspace.config_file, "w"))
+        json.dump(workspace.to_json(), sys.stdout,
                   sort_keys=True,
                   indent=4,
                   separators=(',', ': '))
@@ -399,10 +427,11 @@ class diff(DirectoryCommand):
     def directory_op(cls, repo, workspace, args):
         sys.stdout.write("{:=^80}\n".format(repo.full_directory))
         sys.stdout.flush()
-        if repo.protocol is "SVN":
-            do_cmd("(cd {}; svn diff)".format(repo.full_directory))
+        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+        if protocol is "SVN":
+            do_cmd("(cd {}; svn diff)".format(os.path.join(workspace.devel_root, repo.full_directory)))
         else:
-            do_cmd("(cd {}; git --no-pager diff)".format(repo.full_directory))
+            do_cmd("(cd {}; git --no-pager diff)".format(os.path.join(workspace.devel_root, repo.full_directory)))
                 
 class status(DirectoryCommand):
     description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
@@ -411,10 +440,11 @@ class status(DirectoryCommand):
     def directory_op(cls, repo, workspace, args):
         sys.stdout.write("{:=^80}\n".format(repo.full_directory))
         sys.stdout.flush()
-        if repo.protocol is "SVN":
-            do_cmd("(cd {}; svn status)".format(repo.full_directory))
+        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+        if protocol is "SVN":
+            do_cmd("(cd {}; svn status)".format(os.path.join(workspace.devel_root, repo.full_directory)))
         else:
-            do_cmd("(cd {}; git status)".format(repo.full_directory))
+            do_cmd("(cd {}; git status)".format(os.path.join(workspace.devel_root, repo.full_directory)))
 
 class sanity_check(Command):
     description="Run a sanity check on the environment"
@@ -488,8 +518,8 @@ def main(argv):
         else:
             print "Quiting, due to misconfiguration"
             sys.exit(1);
-            
-    os.chdir(workspace.devel_root);
+    
+            #os.chdir(workspace.devel_root);
     args.func(workspace, args)
     if args.dump:
         workspace.dump()
