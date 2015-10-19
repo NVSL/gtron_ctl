@@ -203,9 +203,6 @@ class update(DirectoryCommand):
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
-            log = open(os.path.join(workspace.devel_root,
-                                    repo.container_directory,
-                                    repo.repo_directory + "-update.log"), "w")
             if dry_run:
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
@@ -217,6 +214,13 @@ class update(DirectoryCommand):
                         print "Couldn't make directory {}".format(repo.container_directory)
                         raise
 
+            if not dry_run:
+                log = open(os.path.join(workspace.devel_root,
+                                        repo.container_directory,
+                                        repo.repo_directory + "-update.log"), "w")
+            else:
+                log = None;  # need something to pass to do_cmd
+                
             protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 #print "Directory exists...updating"
@@ -227,9 +231,9 @@ class update(DirectoryCommand):
             else:
                 print "Directory doesn't exist...checking out"
                 if protocol is "SVN":
-                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root, repo.full_directory), repo.url), stdout=log, stderr=log)
+                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root, repo.container_directory), repo.url), stdout=log, stderr=log)
                 else:
-                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root, repo.full_directory), repo.url), stdout=log, stderr=log)
+                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root, repo.container_directory), repo.url), stdout=log, stderr=log)
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_green("PASSED")))
                 log.close();
