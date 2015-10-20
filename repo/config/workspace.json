@@ -76,7 +76,7 @@
             "directory": "Gadgets/Tools",
             "url": "$NVSL_SVN/Tools/EagleArt"
         },
-	{
+        {
             "directory": "Gadgets/Libraries",
             "url": "$NVSL_SVN/Libraries/CAM"
         },
@@ -98,15 +98,14 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_SVN/Tools/jet_2",
-	    "order": "1000"
+            "order": "1000",
+            "url": "$NVSL_SVN/Tools/jet_2"
         }
-
-
     ],
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
-        "NVSL_SVN": "svn+ssh://${user}@bbfs-01.calit2.net/grw/Gordon/svn/trunk/Gadgets",
+        "NVSL_SVN": "svn+ssh://${user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
+        "branch": "trunk",
         "user": "swanson"
     }
 }
