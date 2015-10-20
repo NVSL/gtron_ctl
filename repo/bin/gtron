@@ -8,6 +8,7 @@ import re
 import json
 import pipes
 import shutil
+import logging as log
 
 class TermColors:
     HEADER = '\033[95m'
@@ -148,7 +149,12 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     if dry_run is True:
         print s
     else:
-        subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
+        log.info("Executing: " + s);
+        try:
+            subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
+        except CalledProcessError as e:
+            log.exception("Command failed  ({})".format(s))
+            raise e
 
 
 class update_system(Command):
@@ -184,7 +190,7 @@ class DirectoryCommand(Command):
             for d in args.directories:
                 r = workspace.get_repo(d)
                 if r is None:
-                    print "Couldn't find repo/directory for '{}'.".format(d)
+                    log.error("Couldn't find repo/directory for '{}'.".format(d))
                     sys.exit(1)
                 else:
                     repo_list.append(r)
@@ -200,6 +206,7 @@ class update(DirectoryCommand):
     def directory_op(cls, repo, workspace, args):
         if not dry_run:
             preamble = "Update {}: ".format(repo.full_directory)
+            log.info(preamble);
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
@@ -207,40 +214,59 @@ class update(DirectoryCommand):
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
                 try:
-                    #print "Making directory {}".format(repo.container_directory)
+                    log.info("Making directory {}".format(repo.container_directory))
                     os.makedirs(os.path.join(workspace.devel_root, repo.container_directory))
-                except OSError:
+                except OSError as e:
                     if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
-                        print "Couldn't make directory {}".format(repo.container_directory)
+                        log.exception("Couldn't make directory {}.".format(repo.container_directory))
                         raise
 
             if not dry_run:
-                log = open(os.path.join(workspace.devel_root,
-                                        repo.container_directory,
-                                        repo.repo_directory + "-update.log"), "w")
+                log_file = open(os.path.join(workspace.devel_root,
+                                             repo.container_directory,
+                                             repo.repo_directory + "-update.log"), "w")
             else:
-                log = None;  # need something to pass to do_cmd
+                log_file = None;  # need something to pass to do_cmd
                 
             protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
-                #print "Directory exists...updating"
+                log.info("Directory exists...updating")
                 if protocol is "SVN":
-                    do_cmd("(cd {}; svn update)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
+                    do_cmd("(cd {}; svn update)".format(os.path.join(workspace.devel_root,
+                                                                     repo.full_directory)),
+                           stdout=log_file,
+                           stderr=log_file)
                 else:
-                    do_cmd("(cd {}; git pull)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
+                    do_cmd("(cd {}; git pull)".format(os.path.join(workspace.devel_root,
+                                                                   repo.full_directory)),
+                           stdout=log_file,
+                           stderr=log_file)
             else:
-                print "Directory doesn't exist...checking out"
+                log.info("Directory doesn't exist...checking out")
                 if protocol is "SVN":
-                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root, repo.container_directory), repo.url), stdout=log, stderr=log)
+                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root,
+                                                                    repo.container_directory),
+                                                       repo.url),
+                           stdout=log_file,
+                           stderr=log_file)
                 else:
-                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root, repo.container_directory), repo.url), stdout=log, stderr=log)
+                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root,
+                                                                       repo.container_directory),
+                                                          repo.url),
+                           stdout=log_file,
+                           stderr=log_file)
             if not dry_run:
+                log.info("** PASSED **")
                 sys.stderr.write(postamble_format.format("", in_green("PASSED")))
-                log.close();
-                shutil.move(os.path.join(workspace.devel_root, repo.container_directory, repo.repo_directory + "-update.log"),
-                            os.path.join(workspace.devel_root, repo.container_directory, repo.repo_directory, "update.log"))
+                log_file.close();
+                do_cmd("mv {} {}".format(os.path.join(workspace.devel_root,
+                                                      repo.container_directory,
+                                                      repo.repo_directory + "-update.log"),
+                                         os.path.join(workspace.devel_root,
+                                                      repo.container_directory,
+                                                      repo.repo_directory, "update.log")))
         except Exception as e:
-            print e
+            log.exception("Update failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
             raise e
@@ -263,23 +289,39 @@ class build(DirectoryCommand):
     def directory_op(cls, repo, workspace, args):
         if not dry_run:
             preamble = "Build {}: ".format(repo.full_directory)
+            log.info(preamble)
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+            
         try:
-            if (os.path.exists(os.path.join(workspace.devel_root, repo.full_directory, "makefile")) or
-                os.path.exists(os.path.join(workspace.devel_root, repo.full_directory, "Makefile"))):
-                #print "Building in {}".format(repo.full_directory)
-                log = open(os.path.join(workspace.devel_root,
+            if (os.path.exists(os.path.join(workspace.devel_root,
+                                            repo.full_directory,
+                                            "makefile")) or
+                os.path.exists(os.path.join(workspace.devel_root,
+                                            repo.full_directory,
+                                            "Makefile"))):
+                log.info("Building in {}".format(repo.full_directory))
+                log_file = open(os.path.join(workspace.devel_root,
                                         repo.full_directory,
                                         "build.log"), "w")
-                do_cmd("(cd {}; make clean)".format(os.path.join(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
-                do_cmd("(cd {}; make )".format(os.path.joir(workspace.devel_root, repo.full_directory)), stdout=log, stderr=log)
+                do_cmd("(cd {}; make clean)".format(os.path.join(workspace.devel_root,
+                                                                 repo.full_directory)),
+                       stdout=log_file,
+                       stderr=log_file)
+                do_cmd("(cd {}; make )".format(os.path.join(workspace.devel_root,
+                                                            repo.full_directory)),
+                       stdout=log_file,
+                       stderr=log_file)
                 if not dry_run:
+                    log.info("** PASSED **")
                     sys.stderr.write(postamble_format.format("", in_green("PASSED")))
             else:
                 if not dry_run:
+                    log.info("** NO BUILD **")
                     sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
+                       
         except Exception as e:
+            log.exception("Build failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
 
@@ -297,22 +339,28 @@ class make(DirectoryCommand):
         make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
         if not dry_run:
             preamble = "'{}' in {}: ".format(make_cmd, repo.full_directory)
+            log.info(premable)
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
             if (os.path.exists(os.path.join(repo.full_directory, "makefile")) or
                 os.path.exists(os.path.join(repo.full_directory, "Makefile"))):
-                log = open(os.path.join(workspace.devel_root,
-                                        repo.full_directory,
-                                        "make.log"), "w")
-                do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd), stdout=log, stderr=log)
+                log_file = open(os.path.join(workspace.devel_root,
+                                             repo.full_directory,
+                                             "make.log"), "w")
+                do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd),
+                       stdout=log_file,
+                       stderr=log_file)
                 if not dry_run:
+                    log.info("** SUCCESS **")
                     sys.stderr.write(postamble_format.format("", in_green("SUCCESS")))
             else:
                 if not dry_run:
+                    log.info("** NO MAKEFILE **")
                     sys.stderr.write(postamble_format.format("", in_green("NO MAKEFILE")))
         except Exception as e:
             if not dry_run:
+                log.info("** FAILURE **")
                 sys.stderr.write(postamble_format.format("", in_red("FAILURE")))
 
 
@@ -373,7 +421,7 @@ class remove_repo(Command):
         if workspace.get_repo(args.directory) is not None:
             workspace.remove_repo(args.directory)
         else:
-            print "Couldn't find repo that lives in {}.".format(args.directory)
+            log.error("Couldn't find repo that lives in {}.".format(args.directory))
             sys.exit(1)
         workspace.write_config()
 
@@ -462,15 +510,19 @@ def sanity(workspace):
 
     #workspace.expand_variables()
     if os.environ.get("GADGETRON_ROOT") is None:
-        print "$GADGETRON_ROOT is not set."
+        log.warn("$GADGETRON_ROOT is not set.")
         return False;
     if os.path.dirname(os.environ.get("GADGETRON_ROOT")) != workspace.devel_root:
-        print "$GADGETRON_ROOT ({}) doesn't correspond to this workspace's root ({}).".format(os.environ["GADGETRON_ROOT"], workspace.devel_root)
+        log.warn("$GADGETRON_ROOT ({}) doesn't correspond to this workspace's root ({}).".format(os.environ["GADGETRON_ROOT"], workspace.devel_root))
         return False
     if os.path.dirname(sys.executable) != os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin"):
-        print os.path.dirname(sys.executable)
-        print os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin")
-        print "Python executable ({}) is not in workspace virtual environment ({})".format(sys.executable, os.path.join(workspace.devel_root, "repo","venv","Gadgetron"))
+        #log.warn(os.path.dirname(sys.executable))
+        #log.warn(os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin"))
+        log.warn("Python executable ({}) is not in workspace virtual environment ({})".format(sys.executable,
+                                                                                              os.path.join(workspace.devel_root,
+                                                                                                           "repo",
+                                                                                                           "venv",
+                                                                                                           "Gadgetron")))
         return False
     return True;
     
@@ -482,15 +534,33 @@ def main(argv):
     panda.parser.add_argument("-n", dest='dry_run', default=False, action='store_true', help="Just print what would be done")
 
     dev_root = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..",".."))
+    config = os.path.join(dev_root,"repo","config","workspace.json")
+
     panda.parser.add_argument("--root",
                               dest='devel_root',
                               default=dev_root,
                               help="Workspace root.  Default: {}".format(dev_root))
-    config = os.path.join(dev_root,"repo","config","workspace.json")
 
-    panda.parser.add_argument("--config", dest='config_file', default=config, help="Configuration file to use.  Default: {}".format(config))
-    panda.parser.add_argument("--force", dest='force', default=False, action="store_true", help="Perform actions even if your configuration seems strange")
-    panda.parser.add_argument("--dump-after", dest='dump', default=False, action="store_true", help="Dump the contents of the config file after completing the command")
+    panda.parser.add_argument("--config",
+                              dest='config_file',
+                              default=config,
+                              help="Configuration file to use.  Default: {}".format(config))
+    panda.parser.add_argument("--force",
+                              dest='force',
+                              default=False,
+                              action="store_true",
+                              help="Perform actions even if your configuration seems strange")
+    panda.parser.add_argument("--dump-after",
+                              dest='dump',
+                              default=False,
+                              action="store_true",
+                              help="Dump the contents of the config file after completing the command")
+
+    panda.parser.add_argument("-v",
+                              required=False,
+                              action='store_true',
+                              dest='verbose',
+                              help="Be verbose")
     
     panda.add_command(update)
     panda.add_command(build)
@@ -510,22 +580,31 @@ def main(argv):
     panda.add_command(config_set)
     panda.add_command(config_unset)
     panda.add_command(config_dump)
-    
+
     args = panda.parse_args(argv[1:])
+
+    if args.verbose:
+        log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+        log.info("Verbose output.")
+    else:
+        log.basicConfig(format="%(levelname)s: %(message)s")
+
+
     global dry_run;
     dry_run = args.dry_run;
 
     workspace = WorkspaceConfig(args.devel_root, args.config_file)
     if not sanity(workspace):
         if args.force:
-            print "Continuing despite misconfiguration"
+            log.warning("Continuing despite misconfiguration")
         else:
-            print "Quiting, due to misconfiguration"
+            log.error("Quiting, due to misconfiguration")
             sys.exit(1);
     
             #os.chdir(workspace.devel_root);
     args.func(workspace, args)
     if args.dump:
         workspace.dump()
+
 if __name__ == "__main__":
     main(sys.argv)
