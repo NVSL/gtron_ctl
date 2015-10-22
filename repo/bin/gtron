@@ -10,6 +10,8 @@ import pipes
 import shutil
 import logging as log
 
+
+
 class TermColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -28,9 +30,9 @@ def in_green(s):
 class Repo:
     def __init__(self, json, count):
         self.url = json["url"]
-        self.container_directory = json["directory"]
-        self.repo_directory = re.search(".*/([\w\-]*)(/$)?", self.url).group(1)
-        self.full_directory = os.path.join(self.container_directory,self.repo_directory)
+        self.container_directory = os.path.normpath(json["directory"])
+        self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
+        self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
         self.stored_order = json.get("order")
         if self.stored_order is None:
             self.sort_by = count;
@@ -61,16 +63,17 @@ class WorkspaceConfig:
         self.repo_map = {}
         for r in json_data["repos"]:
             n = Repo(r, order);
-            self.repo_map[n.full_directory] = n
+            self.add_repo(n);
             order = order + 1
 
     def normalize_path(self, path):
-        return os.path.realpath(path).replace(self.devel_root+"/","")
+        return os.path.normpath(path).replace(self.devel_root+"/","")
             
     def repos(self):
         return sorted(self.repo_map.itervalues(), cmp=lambda x,y: cmp(x.sort_by, y.sort_by));
 
     def add_repo(self, r):
+        log.info("Adding repo '{}' -> '{}'".format(r.full_directory, r.url))
         self.repo_map[r.full_directory] = r
 
     def remove_repo(self, r):
@@ -78,13 +81,7 @@ class WorkspaceConfig:
 
     def get_repo(self, directory):
         directory = self.normalize_path(directory)
-
-        if directory[-1] == "/":
-            d = directory[0:-1]
-        else:
-            d = directory
-
-        return self.repo_map.get(d)
+        return self.repo_map.get(directory)
     
     def to_json(self):
         return {"vars" : self.variables,
@@ -93,9 +90,12 @@ class WorkspaceConfig:
     def expand_variables(self):
         for v in self.variables:
             self.variables[v] = self.eval_with_variables(self.variables[v])
-        for r in self.repos():
+        repos = self.repos();
+        self.repo_map={};
+        for r in repos:
             r.expand_variables(self)
-
+            self.add_repo(r)
+            
     def write_config_to_file(self, file):
         json.dump(self.to_json(),
                   file,
@@ -152,8 +152,8 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
         log.info("Executing: " + s);
         try:
             subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
-        except CalledProcessError as e:
-            log.exception("Command failed  ({})".format(s))
+        except subprocess.CalledProcessError as e:
+            log.info("Command failed  ({}): {}".format(s,e))
             raise e
 
 
@@ -190,7 +190,7 @@ class DirectoryCommand(Command):
             for d in args.directories:
                 r = workspace.get_repo(d)
                 if r is None:
-                    log.error("Couldn't find repo/directory for '{}'.".format(d))
+                    log.error("Couldn't find repo/directory in workspace config: '{}'.".format(d))
                     sys.exit(1)
                 else:
                     repo_list.append(r)
@@ -218,7 +218,7 @@ class update(DirectoryCommand):
                     os.makedirs(os.path.join(workspace.devel_root, repo.container_directory))
                 except OSError as e:
                     if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
-                        log.exception("Couldn't make directory {}.".format(repo.container_directory))
+                        log.error("Couldn't make directory {}.".format(repo.container_directory))
                         raise
 
             if not dry_run:
@@ -232,27 +232,29 @@ class update(DirectoryCommand):
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
                 if protocol is "SVN":
-                    do_cmd("(cd {}; svn update)".format(os.path.join(workspace.devel_root,
+                    do_cmd("(cd {} && svn update)".format(os.path.join(workspace.devel_root,
                                                                      repo.full_directory)),
                            stdout=log_file,
                            stderr=log_file)
                 else:
-                    do_cmd("(cd {}; git pull)".format(os.path.join(workspace.devel_root,
+                    do_cmd("(cd {} && git pull)".format(os.path.join(workspace.devel_root,
                                                                    repo.full_directory)),
                            stdout=log_file,
                            stderr=log_file)
             else:
                 log.info("Directory doesn't exist...checking out")
                 if protocol is "SVN":
-                    do_cmd("(cd {}; svn co {})".format(os.path.join(workspace.devel_root,
-                                                                    repo.container_directory),
-                                                       repo.url),
+                    do_cmd("(cd {} && svn co {} && test -d {})".format(os.path.join(workspace.devel_root,
+                                                                                    repo.container_directory),
+                                                                       repo.url,
+                                                                       repo.repo_directory),
                            stdout=log_file,
                            stderr=log_file)
                 else:
-                    do_cmd("(cd {}; git clone {})".format(os.path.join(workspace.devel_root,
-                                                                       repo.container_directory),
-                                                          repo.url),
+                    do_cmd("(cd {} && git clone {} && test -d {} )".format(os.path.join(workspace.devel_root,
+                                                                                        repo.container_directory),
+                                                                           repo.url,
+                                                                           repo.repo_directory),
                            stdout=log_file,
                            stderr=log_file)
             if not dry_run:
@@ -266,10 +268,12 @@ class update(DirectoryCommand):
                                                       repo.container_directory,
                                                       repo.repo_directory, "update.log")))
         except Exception as e:
-            log.exception("Update failed.")
+            log.info("Update failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
-            raise e
+            log_file.write(str(e))
+            
+
                 
             
 class update_and_build(Command):
@@ -304,11 +308,11 @@ class build(DirectoryCommand):
                 log_file = open(os.path.join(workspace.devel_root,
                                         repo.full_directory,
                                         "build.log"), "w")
-                do_cmd("(cd {}; make clean)".format(os.path.join(workspace.devel_root,
+                do_cmd("(cd {} && make clean)".format(os.path.join(workspace.devel_root,
                                                                  repo.full_directory)),
                        stdout=log_file,
                        stderr=log_file)
-                do_cmd("(cd {}; make )".format(os.path.join(workspace.devel_root,
+                do_cmd("(cd {} && make )".format(os.path.join(workspace.devel_root,
                                                             repo.full_directory)),
                        stdout=log_file,
                        stderr=log_file)
@@ -321,10 +325,11 @@ class build(DirectoryCommand):
                     sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
                        
         except Exception as e:
-            log.exception("Build failed.")
+            log.info("Build failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
-
+            log_file.write(str(e))
+            
 class make(DirectoryCommand):
     description="Run arbitrary 'make' command in each repo"
     help="Run make everywhere"
@@ -348,7 +353,7 @@ class make(DirectoryCommand):
                 log_file = open(os.path.join(workspace.devel_root,
                                              repo.full_directory,
                                              "make.log"), "w")
-                do_cmd("(cd {}; {})".format(repo.full_directory, make_cmd),
+                do_cmd("(cd {} && {})".format(repo.full_directory, make_cmd),
                        stdout=log_file,
                        stderr=log_file)
                 if not dry_run:
@@ -362,16 +367,27 @@ class make(DirectoryCommand):
             if not dry_run:
                 log.info("** FAILURE **")
                 sys.stderr.write(postamble_format.format("", in_red("FAILURE")))
-
+            log_file.write(str(e))
 
 class list_repos(Command):
     description="List repositories that are part of this workspace"
     help="List repositories"
 
     @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--eval",
+                            required=False,
+                            action='store_true',
+                            default=False,
+                            help="Expand variables")
+
+    @classmethod
     def go(cls, workspace, args):
+        if args.eval:
+            workspace.expand_variables()
         for repo in workspace.repos():
             print "{}: {}".format(repo.full_directory, repo.url)
+                
 
 class config_lint(Command):
     description="Parse and writout workspace.json"
@@ -533,7 +549,7 @@ def main(argv):
                              "You can call these")
     panda.parser.add_argument("-n", dest='dry_run', default=False, action='store_true', help="Just print what would be done")
 
-    dev_root = os.path.realpath(os.path.join(os.path.dirname(os.path.realpath(__file__)),"..",".."))
+    dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)),"..",".."))
     config = os.path.join(dev_root,"repo","config","workspace.json")
 
     panda.parser.add_argument("--root",
@@ -559,6 +575,7 @@ def main(argv):
     panda.parser.add_argument("-v",
                               required=False,
                               action='store_true',
+                              default=False,
                               dest='verbose',
                               help="Be verbose")
     
@@ -584,7 +601,7 @@ def main(argv):
     args = panda.parse_args(argv[1:])
 
     if args.verbose:
-        log.basicConfig(format="%(levelname)s: %(message)s", level=log.DEBUG)
+        log.basicConfig(format="%(levelname)s: %(message)s", level=log.INFO)#DEBUG)
         log.info("Verbose output.")
     else:
         log.basicConfig(format="%(levelname)s: %(message)s")
