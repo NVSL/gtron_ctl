@@ -65,7 +65,7 @@
             "url": "$NVSL_SVN/Tools/GCompiler"
         },
         {
-	    "directory": "Gadgets/Tools",
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_SVN/Tools/util"
         },
         {
@@ -97,20 +97,37 @@
             "url": "$NVSL_SVN/Designs/testGadget"
         },
         {
+            "directory": "Gadgets/Designs",
+            "order": 1000,
+            "url": "git@github.com:stevenjswanson/test15.git"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "order": 1000,
+            "url": "git@github.com:stevenjswanson/test13.git"
+        },
+        {
+            "directory": "Gadgets/Designs/${nvsl_user}",
+            "order": "1000",
+            "url": "$NVSL_SVN/Designs/${nvsl_user}"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "order": "1000",
+            "url": "$NVSL_GIT/gtron-design-template"
+        },
+        {
             "directory": "Gadgets/Tools",
             "order": "1000",
             "url": "$NVSL_SVN/Tools/jet_2"
-        },
-        {
-            "directory": "Gadgets/Designs/",
-            "order": "1000",
-            "url": "$NVSL_SVN/Designs/${user}"
         }
     ],
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
-        "NVSL_SVN": "svn+ssh://${user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
+        "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
         "branch": "trunk",
-        "user": "swanson"
+        "design_template": "$NVSL_GIT/gtron-design-template",
+        "github_user": "stevenjswanson",
+        "nvsl_user": "swanson"
     }
 }

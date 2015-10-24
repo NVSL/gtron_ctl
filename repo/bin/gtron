@@ -9,7 +9,7 @@ import json
 import pipes
 import shutil
 import logging as log
-
+import StringIO
 
 
 class TermColors:
@@ -28,12 +28,17 @@ def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
 
 class Repo:
-    def __init__(self, json, count):
+    def __init__(self, json, count=0):
         self.url = json["url"]
         self.container_directory = os.path.normpath(json["directory"])
         self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
         self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
         self.stored_order = json.get("order")
+        if json.get("no_build") is not None:
+            self.no_build = True if json.get("no_build").upper() is "TRUE" else False;
+        else:
+            self.no_build = False
+            
         if self.stored_order is None:
             self.sort_by = count;
         else:
@@ -53,7 +58,7 @@ class Repo:
         self.full_directory = workspace.eval_with_variables(self.full_directory)
         
 class WorkspaceConfig:
-    def __init__(self,devel_root, config_file):
+    def __init__(self,devel_root, config_file, local_config_file):
         json_data = json.load(open(config_file))
         self.config_file = config_file
         self.devel_root = devel_root
@@ -67,7 +72,7 @@ class WorkspaceConfig:
             order = order + 1
 
     def normalize_path(self, path):
-        return os.path.normpath(path).replace(self.devel_root+"/","")
+        return os.path.normpath(os.path.realpath(path)).replace(self.devel_root+"/","")
             
     def repos(self):
         return sorted(self.repo_map.itervalues(), cmp=lambda x,y: cmp(x.sort_by, y.sort_by));
@@ -107,6 +112,7 @@ class WorkspaceConfig:
         self.write_config_to_file(sys.stdout)
         
     def write_config(self):
+        log.info("Writing out config file '{}'...".format(self.config_file))
         shutil.copyfile(self.config_file, self.config_file + ".bak")
         self.write_config_to_file(open(self.config_file, "w"))
 
@@ -151,12 +157,74 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     else:
         log.info("Executing: " + s);
         try:
-            subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
+            if stdout == "RETURN_VALUE":
+                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+                log.info("Output: \n" + output);
+            else:
+                subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
+                output = None
+                
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
             raise e
+    return output
 
 
+class new_design(Command):
+    description="Create a new gadgetron design."
+    help="Create a new gadgetron design."
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--name",
+                            required=True,
+                            dest='name',
+                            help="github username")
+        parser.add_argument("--nvsl",
+                            required=False,
+                            default=False,
+                            action='store_true',
+                            dest='in_nvsl',
+                            help="Create it under the NVSL organization")
+
+    @classmethod
+    def go(cls, workspace,args):
+        template = workspace.variables["design_template"];
+        tail = os.path.basename(template)
+        if os.path.exists(tail+".git"):
+            log.error("Directory exists: {}".format(tail+".git"))
+            sys.exit(1)
+
+        if args.in_nvsl:
+            output = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.variables["github_user"], args.name),
+                            stdout="RETURN_VALUE")
+        else:
+            output = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.variables["github_user"], args.name),
+                            stdout="RETURN_VALUE")
+
+        if not dry_run:
+            response=json.loads(output)
+            if response.get("errors") is not None:
+                log.error("Couldn't create new repo: {}.".format(response["errors"][0]["message"]))
+                sys.exit(1)
+            new_repo = response["ssh_url"]
+        else:
+            new_repo = "NEW_REPO"
+            
+        do_cmd(workspace.eval_with_variables(("git clone --bare {template_repo} && " +
+                                             "cd {tail}.git && "+ 
+                                             "git push --mirror {new_repo}").format(tail=tail,template_repo=template, new_repo=new_repo)))
+        do_cmd(workspace.eval_with_variables("rm -rf {tail}.git".format(tail=tail)))
+
+        if not dry_run:
+            workspace.add_repo(Repo({
+                "directory":"Gadgets/Designs",
+                "url" : new_repo,
+                "order": 1000
+            }))
+            workspace.write_config()
+        
 class update_system(Command):
     description="Update system-wide packagess that Gadgetron depends on"
     help="Update system for Gadgetron"
@@ -170,11 +238,12 @@ class setup_devel(Command):
     
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--user", required=False, dest='user', default=os.environ["USER"], help="NVSL username")
+        parser.add_argument("--nvsl-user", required=False, dest='nvsl_user', help="NVSL username")
+        parser.add_argument("--github-user", required=False, dest='github_user', help="github username")
 
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("setup_gadgetron.sh {}".format(args.user))
+        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user))
 
 class DirectoryCommand(Command):
     @classmethod
@@ -298,16 +367,17 @@ class build(DirectoryCommand):
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
             
         try:
-            if (os.path.exists(os.path.join(workspace.devel_root,
-                                            repo.full_directory,
-                                            "makefile")) or
-                os.path.exists(os.path.join(workspace.devel_root,
-                                            repo.full_directory,
-                                            "Makefile"))):
+            if (repo.no_build is False and
+                (os.path.exists(os.path.join(workspace.devel_root,
+                                             repo.full_directory,
+                                             "makefile")) or
+                 os.path.exists(os.path.join(workspace.devel_root,
+                                             repo.full_directory,
+                                             "Makefile")))):
                 log.info("Building in {}".format(repo.full_directory))
                 log_file = open(os.path.join(workspace.devel_root,
-                                        repo.full_directory,
-                                        "build.log"), "w")
+                                             repo.full_directory,
+                                             "build.log"), "w")
                 do_cmd("(cd {} && make clean)".format(os.path.join(workspace.devel_root,
                                                                  repo.full_directory)),
                        stdout=log_file,
@@ -323,13 +393,13 @@ class build(DirectoryCommand):
                 if not dry_run:
                     log.info("** NO BUILD **")
                     sys.stderr.write(postamble_format.format("", in_green("NO BUILD")))
-                       
+
         except Exception as e:
             log.info("Build failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
             log_file.write(str(e))
-            
+
 class make(DirectoryCommand):
     description="Run arbitrary 'make' command in each repo"
     help="Run make everywhere"
@@ -500,7 +570,7 @@ class diff(DirectoryCommand):
             do_cmd("(cd {}; svn diff)".format(os.path.join(workspace.devel_root, repo.full_directory)))
         else:
             do_cmd("(cd {}; git --no-pager diff)".format(os.path.join(workspace.devel_root, repo.full_directory)))
-                
+
 class status(DirectoryCommand):
     description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
     help="Run 'status' on each repo"
@@ -513,7 +583,7 @@ class status(DirectoryCommand):
             do_cmd("(cd {}; svn status)".format(os.path.join(workspace.devel_root, repo.full_directory)))
         else:
             do_cmd("(cd {}; git status)".format(os.path.join(workspace.devel_root, repo.full_directory)))
-
+    
 class sanity_check(Command):
     description="Run a sanity check on the environment"
     help="Run sanity check"
@@ -587,6 +657,7 @@ def main(argv):
     panda.add_command(make)
     panda.add_command(add_repo)
     panda.add_command(remove_repo)
+    panda.add_command(new_design)
     panda.add_command(sanity_check)
 
     panda.add_command(update_system)
