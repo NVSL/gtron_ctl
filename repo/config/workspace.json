@@ -125,9 +125,6 @@
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
         "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
-        "branch": "trunk",
-        "design_template": "$NVSL_GIT/gtron-design-template",
-        "github_user": "stevenjswanson",
-        "nvsl_user": "swanson"
+        "design_template": "$NVSL_GIT/gtron-design-template"
     }
 }

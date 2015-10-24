@@ -28,12 +28,14 @@ def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
 
 class Repo:
-    def __init__(self, json, count=0):
+    def __init__(self, json, count=0, local=False):
         self.url = json["url"]
         self.container_directory = os.path.normpath(json["directory"])
         self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
         self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
         self.stored_order = json.get("order")
+        self.local = local
+        
         if json.get("no_build") is not None:
             self.no_build = True if json.get("no_build").upper() is "TRUE" else False;
         else:
@@ -51,6 +53,9 @@ class Repo:
             r["order"] = self.stored_order
         return r
 
+    def is_local(self):
+        return self.local
+    
     def expand_variables(self, workspace):
         self.url = workspace.eval_with_variables(self.url)
         self.container_directory = workspace.eval_with_variables(self.container_directory)
@@ -58,18 +63,41 @@ class Repo:
         self.full_directory = workspace.eval_with_variables(self.full_directory)
         
 class WorkspaceConfig:
-    def __init__(self,devel_root, config_file):
-        json_data = json.load(open(config_file))
-        self.config_file = config_file
+    def __init__(self,devel_root, global_config_file, local_config_file):
+        global_json_data = json.load(open(global_config_file))
+        if os.path.exists(local_config_file):
+            local_json_data = json.load(open(local_config_file))
+        else:
+            local_json_data = {}
+        
+        self.global_config_file = global_config_file
+        self.local_config_file = local_config_file
         self.devel_root = devel_root
-        self.variables = json_data["vars"]
+
+        if global_json_data.get("vars") is not None:
+            self.global_variables = global_json_data["vars"]
+        else:
+            self.global_variables = {}
+            
+        if local_json_data.get("vars") is not None:
+            self.local_variables = local_json_data["vars"]
+        else:
+            self.local_variables = {}
+            
         order = 500;
         
         self.repo_map = {}
-        for r in json_data["repos"]:
-            n = Repo(r, order);
-            self.add_repo(n);
-            order = order + 1
+        if global_json_data.get("repos") is not None:
+            for r in global_json_data["repos"]:
+                n = Repo(r, order, local=False);
+                self.add_repo(n);
+                order = order + 1
+
+        if local_json_data.get("repos") is not None:
+            for r in local_json_data["repos"]:
+                n = Repo(r, order, local=True);
+                self.add_repo(n);
+                order = order + 1
 
     def normalize_path(self, path):
         return os.path.normpath(os.path.realpath(path)).replace(self.devel_root+"/","")
@@ -88,33 +116,48 @@ class WorkspaceConfig:
         directory = self.normalize_path(directory)
         return self.repo_map.get(directory)
     
-    def to_json(self):
-        return {"vars" : self.variables,
-                "repos" : [r.to_json() for r in self.repos()]}
+    def to_json(self, local=False):
+        if local:
+            return {"vars" : self.local_variables,
+                    "repos" : [r.to_json() for r in self.repos() if r.is_local()]}
+        else:
+            return {"vars" : self.global_variables,
+                    "repos" : [r.to_json() for r in self.repos() if not r.is_local()]}
+            
 
     def expand_variables(self):
-        for v in self.variables:
-            self.variables[v] = self.eval_with_variables(self.variables[v])
+        for v in self.global_variables:
+            self.global_variables[v] = self.eval_with_variables(self.global_variables[v])
+        for v in self.local_variables:
+            self.local_variables[v] = self.eval_with_variables(self.local_variables[v])
+            
         repos = self.repos();
         self.repo_map={};
         for r in repos:
             r.expand_variables(self)
             self.add_repo(r)
             
-    def write_config_to_file(self, file):
-        json.dump(self.to_json(),
+    def write_config_to_file(self, file, local=False):
+        json.dump(self.to_json(local),
                   file,
                   sort_keys=True,
                   indent=4,
-                  separators=(',', ': '))        
+                  separators=(',', ': '))
 
     def dump(self):
-        self.write_config_to_file(sys.stdout)
+        self.write_config_to_file(sys.stdout, local=False)
+        self.write_config_to_file(sys.stdout, local=True)
         
     def write_config(self):
-        log.info("Writing out config file '{}'...".format(self.config_file))
-        shutil.copyfile(self.config_file, self.config_file + ".bak")
-        self.write_config_to_file(open(self.config_file, "w"))
+        log.info("Writing out global config file '{}'...".format(self.global_config_file))
+        if os.path.exists(self.global_config_file):
+            shutil.copyfile(self.global_config_file, self.global_config_file + ".bak")
+        self.write_config_to_file(open(self.global_config_file, "w"), local=False)
+
+        log.info("Writing out local config file '{}'...".format(self.local_config_file))
+        if os.path.exists(self.local_config_file):
+            shutil.copyfile(self.local_config_file, self.local_config_file + ".bak")
+        self.write_config_to_file(open(self.local_config_file, "w"), local=True)
 
     def eval_with_variables(self, s):
         from string import Template
@@ -122,10 +165,23 @@ class WorkspaceConfig:
         new = s
         while last != new:
             last = new;
-            new = Template(last).safe_substitute(self.variables)
+            t = Template(last).safe_substitute(self.local_variables)
+            new = Template(t).safe_substitute(self.global_variables)
         return new
 
-
+    def set_variable(self, key, value, local=False):
+        if local:
+            self.local_variables[key] = value
+        else:
+            self.global_variables[key] = value
+    def unset_variable(self, key, local=False):
+        try:
+            if local:
+                del self.local_variables[key]
+            else:
+                del self.global_variables[key]
+        except:
+            pass
         
 class Command:
     @classmethod
@@ -240,8 +296,14 @@ class setup_devel(Command):
     
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--nvsl-user", required=False, dest='nvsl_user', help="NVSL username")
-        parser.add_argument("--github-user", required=False, dest='github_user', help="github username")
+        parser.add_argument("--nvsl-user",
+                            required=False,
+                            dest='nvsl_user',
+                            help="NVSL username")
+        parser.add_argument("--github-user",
+                            required=False,
+                            dest='github_user',
+                            help="github username")
 
     @classmethod
     def go(cls, workspace, args):
@@ -250,7 +312,9 @@ class setup_devel(Command):
 class DirectoryCommand(Command):
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("directories", nargs="*", help="Directories to operate on (default: all of them)")
+        parser.add_argument("directories",
+                            nargs="*",
+                            help="Directories to operate on (default: all of them)")
     @classmethod
     def go(cls, workspace, args):
         workspace.expand_variables()
@@ -411,7 +475,11 @@ class make(DirectoryCommand):
     @classmethod
     def add_args(cls, parser):
         DirectoryCommand.add_args(parser)
-        parser.add_argument("--args", nargs="+",  dest='make_args', default=[], help="Arguments for 'make'")
+        parser.add_argument("--args",
+                            nargs="+",
+                            dest='make_args',
+                            default=[],
+                            help="Arguments for 'make'")
 
     @classmethod
     def directory_op(cls, repo, workspace, args):
@@ -476,11 +544,20 @@ class config_set(Command):
 
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("kv", nargs=2, metavar=("variable", "value"), help="Set <variable>=<value>")
+        parser.add_argument("kv",
+                            nargs=2,
+                            metavar=("variable", "value"),
+                            help="Set <variable>=<value>")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
         
     @classmethod
     def go(cls, workspace, args):
-        workspace.variables[args.kv[0]] = args.kv[1]
+        workspace.set_variable(args.kv[0], args.kv[1], local=args.local)
         workspace.write_config()
 
 class add_repo(Command):
@@ -489,12 +566,24 @@ class add_repo(Command):
 
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--repo", required=True, dest="repo", help="Repository URL")
-        parser.add_argument("--directory", required=True, dest="directory", help="Directory where the repo should live")
-        
+        parser.add_argument("--repo",
+                            required=True,
+                            dest="repo",
+                            help="Repository URL")
+        parser.add_argument("--directory",
+                            required=True,
+                            dest="directory",
+                            help="Directory where the repo should live")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
+
     @classmethod
     def go(cls, workspace, args):
-        workspace.add_repo(Repo({"url": args.repo, "directory":args.directory}))
+        workspace.add_repo(Repo({"url": args.repo, "directory":args.directory}, local=args.local))
         workspace.write_config()
 
 class remove_repo(Command):
@@ -503,7 +592,10 @@ class remove_repo(Command):
 
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--directory", required=True, dest="directory", help="Directory holds the contents of the repo")
+        parser.add_argument("--directory",
+                            required=True,
+                            dest="directory",
+                            help="Directory holds the contents of the repo")
         
     @classmethod
     def go(cls, workspace, args):
@@ -521,12 +613,19 @@ class config_unset(Command):
 
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("k", metavar="variable", help="Variable to remove")
-        
+        parser.add_argument("k",
+                            metavar="variable",
+                            help="Variable to remove")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
+                
     @classmethod
     def go(cls, workspace, args):
-        if args.k in workspace.variables:
-            del workspace.variables[args.k]
+        workspace.unset_variable(args.k, local=args.local)
         workspace.write_config()
 
 class config_cleanup(Command):
@@ -551,7 +650,12 @@ class config_dump(Command):
 
     @classmethod
     def add_args(cls, parser):
-        parser.add_argument("--expand", required=False,  default=False, action="store_true", dest="expand", help="Expand all variables")
+        parser.add_argument("--expand",
+                            required=False,
+                            default=False,
+                            action="store_true",
+                            dest="expand",
+                            help="Expand all variables")
 
     @classmethod
     def go(cls, workspace, args):
@@ -621,10 +725,16 @@ def main(argv):
     panda = ParseAndDispatch("Workspace manager for Gadgetron",
                              "Available commands",
                              "You can call these")
-    panda.parser.add_argument("-n", dest='dry_run', default=False, action='store_true', help="Just print what would be done")
+
+    panda.parser.add_argument("-n",
+                              dest='dry_run',
+                              default=False,
+                              action='store_true',
+                              help="Just print what would be done")
 
     dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)),"..",".."))
-    config = os.path.join(dev_root,"repo","config","workspace.json")
+    global_config = os.path.join(dev_root,"repo","config","workspace.json")
+    local_config = os.path.join(dev_root,"repo","config","workspace.local.json")
 
     panda.parser.add_argument("--root",
                               dest='devel_root',
@@ -632,14 +742,21 @@ def main(argv):
                               help="Workspace root.  Default: {}".format(dev_root))
 
     panda.parser.add_argument("--config",
-                              dest='config_file',
-                              default=config,
-                              help="Configuration file to use.  Default: {}".format(config))
+                              dest='global_config_file',
+                              default=global_config,
+                              help="Global configuration file to use.  Default: {}".format(global_config))
+
+    panda.parser.add_argument("--local-config",
+                              dest='local_config_file',
+                              default=local_config,
+                              help="Local configuration file to use.  Default: {}".format(local_config))
+
     panda.parser.add_argument("--force",
                               dest='force',
                               default=False,
                               action="store_true",
                               help="Perform actions even if your configuration seems strange")
+
     panda.parser.add_argument("--dump-after",
                               dest='dump',
                               default=False,
@@ -685,7 +802,7 @@ def main(argv):
     global dry_run;
     dry_run = args.dry_run;
 
-    workspace = WorkspaceConfig(args.devel_root, args.config_file)
+    workspace = WorkspaceConfig(args.devel_root, args.global_config_file, args.local_config_file)
     if not sanity(workspace):
         if args.force:
             log.warning("Continuing despite misconfiguration")
