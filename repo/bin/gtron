@@ -58,7 +58,7 @@ class Repo:
         self.full_directory = workspace.eval_with_variables(self.full_directory)
         
 class WorkspaceConfig:
-    def __init__(self,devel_root, config_file, local_config_file):
+    def __init__(self,devel_root, config_file):
         json_data = json.load(open(config_file))
         self.config_file = config_file
         self.devel_root = devel_root
@@ -153,6 +153,7 @@ dry_run = False;
 
 def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     if dry_run is True:
+        output = ""
         print s
     else:
         log.info("Executing: " + s);
@@ -166,6 +167,7 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
                 
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
+            output = ""
             raise e
     return output
 
@@ -340,7 +342,9 @@ class update(DirectoryCommand):
             log.info("Update failed.")
             if not dry_run:
                 sys.stderr.write(postamble_format.format("", in_red("FAILED")))
-            log_file.write(str(e))
+                log_file.write(str(e))
+            else:
+                log.exception(e)
             
 
                 
