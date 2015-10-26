@@ -51,6 +51,8 @@ class Repo:
               "directory": self.container_directory}
         if self.stored_order is not None:
             r["order"] = self.stored_order
+        if self.no_build is True:
+            r["no_build"] = "TRUE"
         return r
 
     def is_local(self):
