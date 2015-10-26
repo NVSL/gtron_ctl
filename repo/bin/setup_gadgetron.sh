@@ -2,7 +2,7 @@
 
 cd ${0%/*}
 
-if [ ".$1" = "." || ".$2" = "." ]; then
+if [ ".$1" = "." ] || [ ".$2" = "." ]; then
     echo "usage: setup_gadgetron.sh <bb cluster username> <github username>"
 fi 
 
