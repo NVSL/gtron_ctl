@@ -6,9 +6,9 @@ if [ ".$1" = "." || ".$2" = "." ]; then
     echo "usage: setup_gadgetron.sh <bb cluster username> <github username>"
 fi 
 
-gtron config_set nvsl_user $1
-gtron config_set github_user $2
-gtron config_set branch trunk
+gtron --force config_set nvsl_user $1
+gtron --force config_set github_user $2
+gtron --force config_set branch trunk
 
 source ../lib/install_util.sh
 
