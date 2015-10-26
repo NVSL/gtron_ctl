@@ -486,7 +486,7 @@ class make(DirectoryCommand):
         make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
         if not dry_run:
             preamble = "'{}' in {}: ".format(make_cmd, repo.full_directory)
-            log.info(premable)
+            log.info(preamble)
             sys.stderr.write(preamble)
             postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
         try:
