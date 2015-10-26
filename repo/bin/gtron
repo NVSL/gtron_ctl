@@ -37,7 +37,7 @@ class Repo:
         self.local = local
         
         if json.get("no_build") is not None:
-            self.no_build = True if json.get("no_build").upper() is "TRUE" else False;
+            self.no_build = True if json.get("no_build").uppercase() is "TRUE" else False;
         else:
             self.no_build = False
             
