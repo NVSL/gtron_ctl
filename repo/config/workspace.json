@@ -106,12 +106,7 @@
             "order": 1000,
             "url": "git@github.com:stevenjswanson/test13.git"
         },
-        {
-            "directory": "Gadgets/Designs/${nvsl_user}",
-            "order": "1000",
-            "url": "$NVSL_SVN/Designs/${nvsl_user}"
-        },
-        {
+         {
             "directory": "Gadgets/Designs",
             "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
