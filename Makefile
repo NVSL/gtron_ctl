@@ -7,3 +7,6 @@ default:
 clean:
 	true;
 
+
+docs:
+	$(MAKE) -C repo/doc html
