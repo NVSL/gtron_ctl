@@ -421,7 +421,7 @@ class DirectoryCommand(Command):
             try: 
                 os.makedirs(repo.container_directory)
             except OSError:
-                if not os.path.isdir(path):
+                if not os.path.isdir(repo.container_directory)
                     log.error("Couldn't create directory '{}'".format(repo.container_directory))
                     raise
                 
@@ -834,6 +834,18 @@ class cleanup(Command):
     def go(cls, workspace, args):
         do_cmd("find . -name '*.gtron.log'| xargs rm -rf")
 
+class full_docs(Command):
+    """Build and open the manual in a web browser"""
+    description="Build the html docs and open them"
+    help="Build the html docs and open them"
+    @classmethod
+    def go(cls, workspace, args):
+        directory=workspace.absolute_path("repo/doc")
+        if platform.system() == "Darwin":
+            do_cmd("cd {} && make html && open _build/html/index.html".format(directory))
+        elif platform.system() == "Linux":
+            do_cmd("cd {} && make html && google-chrome _build/html/index.html".format(directory))
+        
 def sanity(workspace):
 
     #workspace.expand_variables()
@@ -904,6 +916,7 @@ def main(argv):
                               dest='verbose',
                               help="Be verbose")
     
+    panda.add_command(full_docs)
     panda.add_command(update)
     panda.add_command(build)
     panda.add_command(update_and_build)
@@ -925,6 +938,7 @@ def main(argv):
     panda.add_command(config_set)
     panda.add_command(config_unset)
     panda.add_command(config_dump)
+
 
     args = panda.parse_args(argv[1:])
 
