@@ -21,7 +21,7 @@ start_ssh_agent
 
 source gtron_env.sh
 gtron --force update_system --install-apps
-gtron --force setup_devel --nvsl-user $nvsl --git-user $github
+gtron --force setup_devel --nvsl-user $nvsl --github-user $github
 activate_gadgetron
 
 gtron update
