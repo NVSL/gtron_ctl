@@ -99,15 +99,11 @@
         {
             "directory": "Gadgets/Designs",
             "order": 1000,
-            "url": "git@github.com:stevenjswanson/test15.git"
+            "url": "git@github.com:NVSL/test17.git"
         },
         {
             "directory": "Gadgets/Designs",
-            "order": 1000,
-            "url": "git@github.com:stevenjswanson/test13.git"
-        },
-         {
-            "directory": "Gadgets/Designs",
+            "no_build": "TRUE",
             "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
         },
