@@ -421,7 +421,7 @@ class DirectoryCommand(Command):
             try: 
                 os.makedirs(repo.container_directory)
             except OSError:
-                if not os.path.isdir(repo.container_directory)
+                if not os.path.isdir(repo.container_directory):
                     log.error("Couldn't create directory '{}'".format(repo.container_directory))
                     raise
                 
