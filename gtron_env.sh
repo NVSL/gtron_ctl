@@ -49,7 +49,8 @@ export DOWNLOAD_DIR=$HOME/Downloads
 
 export GADGETRON_COMPONENT_LIB=$GADGETRON_ROOT/Libraries/Components
 
-export PYTHONPATH=$GADGETRON_ROOT/Tools/EagleUtil:\
+export PYTHONPATH=$GADGETRON_ROOT/../repo/bin:\
+$GADGETRON_ROOT/Tools/EagleUtil:\
 $GADGETRON_ROOT/Tools/AutomaKit:\
 $GADGETRON_ROOT/Tools/Dingo:\
 $GADGETRON_ROOT/Tools/util:\

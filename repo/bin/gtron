@@ -260,6 +260,14 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
 
 
 class new_design(Command):
+    """
+    Create a new design.  It will will on github and will be added as a repo in
+    the local configuration file.
+    
+    :param --name: the name of the design (no spaces) (required)
+    :param --nvsl: Store it under the NVSL organization?  By default, store it under your github account.
+
+    """
     description="Create a new gadgetron design."
     help="Create a new gadgetron design."
     @classmethod
@@ -315,6 +323,15 @@ class new_design(Command):
             workspace.write_config()
         
 class update_system(Command):
+    """
+
+    Update system-wide installations that this workspace requires.  This
+    includes global python library like virtualenv, javascript utilities like
+    node and npm, and applications like Eagle, Google App Engine, and Chrome.
+
+    By default, just update python on node.  With :code:`--install-app`, install everything.
+
+    """
     description="Update system-wide packagess that Gadgetron depends on"
     help="Update system for Gadgetron"
     @classmethod
@@ -334,6 +351,17 @@ class update_system(Command):
             do_cmd("update_system.sh")
                         
 class setup_devel(Command):
+    """
+    Perform initial configuration for the workspace (it runs :code:`repo/bin/setup_gadgetron.sh`).  This includes three tasks:
+
+    1.  Initialized :code:`Workspace.local.json`.
+    2.  Setup the python virtual environment for the workspace.
+    3.  Build CGAL.
+
+    :param --nvsl-user: NVSL username (i.e., your name on the BB cluster)
+    :param --github-user:  Your username on github
+    """
+   
     description="Setup the development environment."
     help="Setup the devel environment.  You should only need to do this once."
     
@@ -386,14 +414,23 @@ class DirectoryCommand(Command):
                 sys.stderr.write(preamble)
                 postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
 
+                 
             tmp_log_file_name=os.path.join(repo.container_directory,
                                            "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
+
+            try: 
+                os.makedirs(repo.container_directory)
+            except OSError:
+                if not os.path.isdir(path):
+                    log.error("Couldn't create directory '{}'".format(repo.container_directory))
+                    raise
+                
             final_log_file_name=os.path.join(repo.full_directory,
                                              "{}.gtron.log".format(cls.log_file_prefix))
-            log.info("Opened {} for logging".format(tmp_log_file_name))
                 
             if cls.needs_log:
                 log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
+                log.info("Opened {} for logging".format(tmp_log_file_name))
             else:
                 log_file = None
                 
@@ -425,6 +462,11 @@ class DirectoryCommand(Command):
         os.chdir(oldPWD)
         
 class update(DirectoryCommand):
+    """
+
+    Update all the repos.  Depending on whether the repo is in SVN or git, it either does :code:`svn update` or :code:`git update`.
+
+    """
     description="Update all the devel directories"
     help="Get latest updates"
     log_file_prefix="update"
@@ -482,6 +524,12 @@ class update_and_build(Command):
         build.go(workspace,args)                
 
 class make(DirectoryCommand):
+    """ Run :code:`make` in all the repos.
+
+    You can pass arguments to :code:`make` with the :code:`--args` flag.
+    
+    """
+
     description="Run arbitrary 'make' command in each repo"
     help="Run make everywhere"
     log_file_prefix="make"
@@ -507,6 +555,14 @@ class make(DirectoryCommand):
             return (True, "No Makefile")
 
 class build(make):
+    """ Build all the repos.  This is equivalent to 
+
+.. code-block:: shell
+      
+    gtron make --args clean
+    gtron make
+    
+    """
     description="Run build in all the devel directories"
     help="Build everything"
     log_file_prefix="build"
@@ -529,6 +585,10 @@ class build(make):
             return (True, "NO BUILD")
 
 class list_repos(Command):
+    """
+    Print a list of all the repos.  With the :code:`--eval` option, expand variables first.
+    """
+    
     description="List repositories that are part of this workspace"
     help="List repositories"
 
@@ -556,6 +616,18 @@ class config_lint(Command):
         pass
 
 class config_set(Command):
+    """Set a variable in the configuration file.
+    
+    It takes a key-value pair as two positional parameters.  For example:
+
+    .. code-block:: shell
+    
+      gtron config_set foo bar
+    
+    Sets variable :code:`foo` to :code:`"bar"`.  You can include variables in the
+    value, but make sure you escape them properly, or the shell will expand them before gtron gets them.
+    """
+    
     description="Set variable value in config file"
     help="Set variable in config file"
 
@@ -578,6 +650,12 @@ class config_set(Command):
         workspace.write_config()
 
 class add_repo(Command):
+    """Add a repo to the workspace.
+    
+    :param --repo: Git or SVN URL for the repo.
+    :param --direcotry: Directory that the repo should reside in.
+    
+    """
     description="Add a repository to checkout as part of this workspace"
     help="Add a repository"
 
@@ -604,6 +682,13 @@ class add_repo(Command):
         workspace.write_config()
 
 class remove_repo(Command):
+    """
+    Remove a repo.
+    
+    :param --directory: The repo directory to remove.
+
+    """
+    
     description="Remove a repository to checkout as part of this workspace"
     help="Remove a repository"
 
@@ -625,6 +710,9 @@ class remove_repo(Command):
         workspace.write_config()
 
 class config_unset(Command):
+    """
+    Remove a variable from the configuration file.  It takes the name of the variable as a single parameter.
+    """
     description="Remove variable from config file"
     help="Remove variable from config file"
 
@@ -646,6 +734,9 @@ class config_unset(Command):
         workspace.write_config()
 
 class config_cleanup(Command):
+    """
+    Reformat the configuration files by loading them and writing them back out.
+    """
     description="Reformat config file"
     help="Reformat config file"
     @classmethod
@@ -662,6 +753,12 @@ class config_cleanup(Command):
                   separators=(',', ': '))
 
 class config_dump(Command):
+    """
+    Parse the configuration files and print them out.
+    
+    :param --expand: Expand variable before displaying the configuration.
+
+    """
     description="Parse, re-serialize, and print config file"
     help="Print config file"
 
@@ -684,6 +781,7 @@ class config_dump(Command):
                   separators=(', ', ' : '))
 
 class diff(DirectoryCommand):
+    """Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
     description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
     help="Run diff of each repo."
     needs_log=False
@@ -702,6 +800,7 @@ class diff(DirectoryCommand):
         return (True, None)
 
 class status(DirectoryCommand):
+    """Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."""
     description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
     help="Run 'status' on each repo"
     needs_log=False
@@ -727,6 +826,8 @@ class sanity_check(Command):
         pass # it's a noop, becaue we always run a sanity check.
 
 class cleanup(Command):
+    """Cleanup all the log files that gtron creates."""
+    
     description="Cleanup all the files that gtron creates"
     help="Cleanup after gtron"
     @classmethod

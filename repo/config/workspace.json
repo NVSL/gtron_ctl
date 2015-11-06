@@ -104,7 +104,7 @@
         {
             "directory": "Gadgets/Designs",
             "no_build": "TRUE",
-            "order": "1000",
+            "order": 1000,
             "url": "$NVSL_GIT/gtron-design-template"
         },
         {
