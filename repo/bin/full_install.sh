@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
-cd ${0%/*}
+git clone -b develop git@github.com:NVSL/gtron_devel.git
+pushd gtron_devel
 
-source ../lib/install_util.sh
-source ../lib/install_common.sh
+source repo/lib/install_util.sh
+source repo/lib/install_common.sh
 
 request "Enter your NVSL lab username:"
 read nvsl
@@ -17,8 +18,6 @@ fi
 
 start_ssh_agent
 
-git clone -b develop git@github.com:NVSL/gtron_devel.git
-pushd gtron_devel
 
 source gtron_env.sh
 gtron --force update_system --install-apps
