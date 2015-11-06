@@ -20,6 +20,7 @@ start_ssh_agent
 
 
 source gtron_env.sh
+banner "Ignore the following warnings..."
 gtron --force update_system --install-apps
 gtron --force setup_devel --nvsl-user $nvsl --github-user $github
 activate_gadgetron
