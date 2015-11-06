@@ -10,6 +10,7 @@ import pipes
 import shutil
 import logging as log
 import StringIO
+import platform
 
 """
 
