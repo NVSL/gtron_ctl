@@ -462,7 +462,37 @@ class DirectoryCommand(Command):
                     except Exception as e:
                         log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
         os.chdir(oldPWD)
-        
+
+class cmd(DirectoryCommand):
+    """
+    Run a shell command in all the repos.
+    
+    :param --cmd:  The command to run.
+    """
+    description="Run a shell command in all the repos."
+    help="Run a shell command in all the repos."
+    needs_log=False
+    pretty_print=False
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--cmd",
+                            nargs="+",
+                            dest='cmd',
+                            default=[],
+                            help="Shell command")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        print "============ {} ============".format(repo.full_directory)
+        try:
+            do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
+            return (True, "Success")
+        except Exception as e:
+            log.exception(e)
+            return (False, "Failed")
+
 class update(DirectoryCommand):
     """
 
@@ -938,6 +968,7 @@ def main(argv):
     panda.add_command(diff)
     panda.add_command(status)
     panda.add_command(make)
+    panda.add_command(cmd)
     panda.add_command(add_repo)
     panda.add_command(remove_repo)
     panda.add_command(new_design)
