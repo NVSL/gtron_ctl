@@ -14,7 +14,7 @@ $GADGETRON_ROOT/Tools/PADSUtil:\
 $GADGETRON_ROOT/Tools/SVGUtil:\
 $GADGETRON_ROOT/Tools/EagleArt:\
 $GADGETRON_ROOT/Tools/pcbartmaker:\
-$GADGETRON_ROOT/Tools/AutomaKit:\
+$GADGETRON_ROOT/Tools/Gadgetron:\
 $GADGETRON_ROOT/Tools/Dingo:\
 $GADGETRON_ROOT/Tools/CaseMaker:\
 $GADGETRON_ROOT/Tools/util:\
@@ -38,20 +38,18 @@ function deactivate_gadgetron () {
 
 activate_gadgetron
 
-export EAGLE_LIBS=$GADGETRON_ROOT/Libraries/Parts/Eagle
-export EAGLE_CAM=$GADGETRON_ROOT/Libraries/CAM/Eagle
-export PADS_LIBS=$GADGETRON_ROOT/Libraries/Parts/PADS
-export AUTOMAKIT=$GADGETRON_ROOT/Tools/AutomaKit
-export GADGETRON_CATALOG=$GADGETRON_ROOT/Libraries/Components/Catalog
+export EAGLE_LIBS=$GADGETRON_ROOT/Libraries/GadgetronPCBLibs/Eagle
+export EAGLE_CAM=$GADGETRON_ROOT/Libraries/GadgetronCAM/Eagle
+export AUTOMAKIT=$GADGETRON_ROOT/Tools/Gadgetron
+export GADGETRON_CATALOG=$GADGETRON_ROOT/Libraries/JetComponents/Catalog
 export GADGETRON_CONFIG=$AUTOMAKIT/gadgetron.config
-# this is where downloads go jet uses it to grab g.svg files.
 export DOWNLOAD_DIR=$HOME/Downloads
 
-export GADGETRON_COMPONENT_LIB=$GADGETRON_ROOT/Libraries/Components
+export GADGETRON_COMPONENT_LIB=$GADGETRON_ROOT/Libraries/JetComponents
 
 export PYTHONPATH=$GADGETRON_ROOT/../repo/bin:\
 $GADGETRON_ROOT/Tools/EagleUtil:\
-$GADGETRON_ROOT/Tools/AutomaKit:\
+$GADGETRON_ROOT/Tools/Gadgetron:\
 $GADGETRON_ROOT/Tools/Dingo:\
 $GADGETRON_ROOT/Tools/util:\
 $GADGETRON_ROOT/Tools/SVGUtil:\
