@@ -36,6 +36,7 @@ Contents:
    GettingStarted
    Tour
    Commands
+   Bugs
    
 
 Indices and tables

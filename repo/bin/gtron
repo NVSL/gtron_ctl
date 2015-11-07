@@ -515,14 +515,23 @@ class update(DirectoryCommand):
                 log.exception(e)
                 raise e
             
-class update_and_build(Command):
-    description="Update all the devel directories, then build them"
-    help="Get latest updates and build"
+class ubt(DirectoryCommand):
+    """Update, build, and test all the repos.  Equivalent to
+
+.. code-block:: shell
+      
+    gtron update
+    gtron build
+    gtron test
+"""
+    description="Update, build, and test all the repos."
+    help="Update, build, and test all the repos."
     
     @classmethod
     def go(cls, workspace, args):
         update.go(workspace,args)
         build.go(workspace,args)                
+        test.go(workspace,args)                
 
 class make(DirectoryCommand):
     """ Run :code:`make` in all the repos.
@@ -846,7 +855,21 @@ class full_docs(Command):
             do_cmd("cd {} && make html && open _build/html/index.html".format(directory))
         elif platform.system() == "Linux":
             do_cmd("cd {} && make html && google-chrome _build/html/index.html".format(directory))
-        
+
+class test(make):
+    """Run tests in all the repos.  Specifically, run 'make test'."""
+    description="Run tests in all the repos."
+    help="Run tests in all the repos."
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        args.make_args=["test"]
+        result = make.directory_op(repo, workspace, args, log_file)
+        if not result[0]:
+            return (False, "FAILED")
+        else:
+            return (True, "SUCCESS")
+    
 def sanity(workspace):
 
     #workspace.expand_variables()
@@ -920,7 +943,8 @@ def main(argv):
     panda.add_command(full_docs)
     panda.add_command(update)
     panda.add_command(build)
-    panda.add_command(update_and_build)
+    panda.add_command(test)
+    panda.add_command(ubt)
     panda.add_command(diff)
     panda.add_command(status)
     panda.add_command(make)

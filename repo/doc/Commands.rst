@@ -52,6 +52,17 @@ build
 
 .. autoclass:: build
 
+test
+----
+
+.. autoclass:: test
+
+ubt
+---
+
+.. autoclass:: ubt
+
+	       
 diff
 ----
 
