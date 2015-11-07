@@ -17,6 +17,8 @@ import platform
 
 """
 
+dry_run = False;
+
 class TermColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -31,6 +33,7 @@ def in_red(s):
     return TermColors.FAIL + s + TermColors.ENDC
 def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
+
 def chdir(d):
     log.info("Entering '{}'".format(d))
     if dry_run:
@@ -237,7 +240,6 @@ class ParseAndDispatch:
         return self.parser.parse_args(argv)
 
 
-dry_run = False;
 
 def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     if dry_run is True:
@@ -420,16 +422,16 @@ class DirectoryCommand(Command):
                                            "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
 
             try: 
-                os.makedirs(repo.container_directory)
+                os.makedirs(workspace.absolute_path(repo.container_directory))
             except OSError:
-                if not os.path.isdir(repo.container_directory):
-                    log.error("Couldn't create directory '{}'".format(repo.container_directory))
+                if not os.path.isdir(workspace.absolute_path(repo.container_directory)):
+                    log.error("Couldn't create directory '{}'".format(workspace.absolute_path(repo.container_directory)))
                     raise
                 
             final_log_file_name=os.path.join(repo.full_directory,
                                              "{}.gtron.log".format(cls.log_file_prefix))
                 
-            if cls.needs_log:
+            if cls.needs_log and not dry_run:
                 log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
                 log.info("Opened {} for logging".format(tmp_log_file_name))
             else:
@@ -437,10 +439,9 @@ class DirectoryCommand(Command):
                 
             try:
                 r = cls.directory_op(repo, workspace, args, log_file)
-                success = r[0]
-                msg = r[1]
-                    
                 if not dry_run and cls.pretty_print:
+                    success = r[0]
+                    msg = r[1]
                     if success:
                         sys.stderr.write(postamble_format.format("", in_green(msg)))
                     else:
@@ -458,7 +459,7 @@ class DirectoryCommand(Command):
                         os.rename(workspace.absolute_path(tmp_log_file_name),
                                   workspace.absolute_path(final_log_file_name));
                         log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
-                    except e:
+                    except Exception as e:
                         log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
         os.chdir(oldPWD)
         
@@ -489,6 +490,7 @@ class update(DirectoryCommand):
             protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
+                chdir(workspace.absolute_path(repo.full_directory))
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
                 else:
@@ -510,7 +512,7 @@ class update(DirectoryCommand):
         except Exception as e:
             if not dry_run:
                 log_file.write(str(e))
-                return (True, "FAILED")
+                return (False, "FAILED")
             else:
                 log.exception(e)
                 raise e
@@ -587,10 +589,7 @@ class build(make):
             
             args.make_args=[]
             build_result = make.directory_op(repo, workspace, args, log_file)
-            if not build_result[0]:
-                return build_result
-            else:
-                return (True, "SUCCESS")
+            return build_result
         else:
             return (True, "NO BUILD")
 
@@ -751,16 +750,7 @@ class config_cleanup(Command):
     help="Reformat config file"
     @classmethod
     def go(cls, workspace, args):
-        shutil.copyfile(workspace.config_file, workspace.config_file + ".bak")
-        json.dump(workspace.to_json(), sys.stdout,
-                       sort_keys=True,
-                       indent=4,
-                       separators=(',', ': '))
-        workspace.expand_variables()
-        json.dump(workspace.to_json(), sys.stdout,
-                  sort_keys=True,
-                  indent=4,
-                  separators=(',', ': '))
+        workspace.write_config()
 
 class config_dump(Command):
     """
