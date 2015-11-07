@@ -58,10 +58,12 @@ function push_ssh_key_to_bb_cluster() {
 }
 
 function push_ssh_key_to_github() {
-    request  "Visit \n\nhttps://github.com/settings/ssh \n\nand add this key by copying and pasting it into the space provided.  Give it a meaningful name, like 'Gadgetron Development Key'"
+    request  "Visit \n\nhttps://github.com/settings/ssh \n\nand add this key by copying and pasting it into the space provided.  Give it a meaningful name, like 'Gadgetron Development Key'.  I'll try to open it for you."
+    
     cat ~/.ssh/id_rsa.pub
     
     request "PRESS RETURN WHEN YOU HAVE DONE SO. (waiting...)"
+    (open https://github.com/settings/ssh || google-chrome https://github.com/settings/ssh)
     read junk
 }
 

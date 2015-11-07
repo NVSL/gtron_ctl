@@ -17,6 +17,8 @@ read nvsl
 echo "Enter your github username:"
 read github
 
+user=$nvsl
+
 if ensure_ssh_key; then
     push_ssh_key_to_bb_cluster
     push_ssh_key_to_github
