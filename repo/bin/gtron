@@ -485,6 +485,7 @@ class cmd(DirectoryCommand):
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
         print "============ {} ============".format(repo.full_directory)
         try:
             do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
@@ -532,9 +533,12 @@ class update(DirectoryCommand):
                                                                        repo.url,
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
-                    do_cmd("(cd {} && git clone {} && test -d {} )".format(workspace.absolute_path(repo.container_directory),
-                                                                           repo.url,
-                                                                           repo.repo_directory), stdout=log_file, stderr=log_file)
+                    do_cmd("(cd {} && git clone {} && test -d {} && cd {} && git checkout develop)".format(workspace.absolute_path(repo.container_directory),
+                                                                                                           repo.url,
+                                                                                                           repo.repo_directory,
+                                                                                                           repo.repo_directory), 
+                           stdout=log_file, 
+                           stderr=log_file)
             if not dry_run:
                 return (True, "PASSED")
             
