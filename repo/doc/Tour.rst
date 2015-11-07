@@ -103,3 +103,14 @@ Here is a typical local config file:
    }
 
 
+Other Configuration Files
+-------------------------
+
+There are several other configuration files in :code:`repo/config/`.  The are simple lists in text files.  Eventually they should be moved to :code:`Workspace.json` or they should be in the native format for the appropriate package managers (any volunteers?):
+
+* :code:`brew_packages.txt`: List of brew packages to install during Mac installation.
+* :code:`ubuntu_packages.txt`:  A list of ubuntu packages to install during Linux installation.
+* :code:`global_node.txt`: A list of node.js packages to globally.
+* :code:`global_python.txt`: A list of python  packages to install globally.
+* :code:`local_python.txt`: A list of python packages to install locally.
+* :code:`names.mapped`: A mapping between NVSL cluster usernames and names/emails. Useful for importing from SVN to git hub.
