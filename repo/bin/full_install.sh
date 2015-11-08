@@ -15,7 +15,7 @@ popd
 echo  "Enter your NVSL lab username:"
 read nvsl_user
 echo "Enter your github username:"
-read git_user
+read github_user
 
 user=$nvsl_user
 
