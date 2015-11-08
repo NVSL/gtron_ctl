@@ -503,7 +503,14 @@ class update(DirectoryCommand):
     description="Update all the devel directories"
     help="Get latest updates"
     log_file_prefix="update"
-    
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--branch",
+                            default="develop",
+                            help="Branch to checkout (git only)")
+
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         try:
@@ -533,10 +540,11 @@ class update(DirectoryCommand):
                                                                        repo.url,
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
-                    do_cmd("(cd {} && git clone {} && test -d {} && cd {} && git checkout develop)".format(workspace.absolute_path(repo.container_directory),
-                                                                                                           repo.url,
-                                                                                                           repo.repo_directory,
-                                                                                                           repo.repo_directory), 
+                    do_cmd("(cd {} && git clone {} && test -d {} && cd {} && git checkout {})".format(workspace.absolute_path(repo.container_directory),
+                                                                                                      repo.url,
+                                                                                                      repo.repo_directory,
+                                                                                                      repo.repo_directory,
+                                                                                                      args.branch), 
                            stdout=log_file, 
                            stderr=log_file)
             if not dry_run:
