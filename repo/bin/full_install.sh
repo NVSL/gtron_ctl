@@ -26,7 +26,7 @@ push_ssh_key_to_github
 
 start_ssh_agent
 
-git clone -b develop git@github.com:NVSL/gtron_devel.git
+git clone -b git-repos git@github.com:NVSL/gtron_devel.git
 pushd gtron_devel
 
 source repo/lib/install_util.sh
