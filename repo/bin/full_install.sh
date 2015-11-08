@@ -13,9 +13,11 @@ popd
 rm -rf .tmp
 
 echo  "Enter your NVSL lab username:"
-read nvsl
+read nvsl_user
 echo "Enter your github username:"
-read github
+read git_user
+
+user=$nvsl_user
 
 if ensure_ssh_key; then
     push_ssh_key_to_bb_cluster
