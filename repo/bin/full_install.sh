@@ -3,8 +3,8 @@
 mkdir .tmp
 pushd .tmp
 
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/develop/repo/lib/install_util.sh > install_util.sh
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/develop/repo/lib/install_common.sh > install_common.sh
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/git-repos/repo/lib/install_util.sh > install_util.sh
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/git-repos/repo/lib/install_common.sh > install_common.sh
 
 source install_util.sh
 source install_common.sh
