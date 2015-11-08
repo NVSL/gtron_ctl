@@ -191,7 +191,10 @@ class WorkspaceConfig:
         log.info("Writing out local config file '{}'...".format(self.local_config_file))
         if os.path.exists(self.local_config_file):
             shutil.copyfile(self.local_config_file, self.local_config_file + ".bak")
-        self.write_config_to_file(open(self.local_config_file, "w"), local=True)
+        out =open(self.local_config_file, "w")
+        self.write_config_to_file(out, local=True)
+        out.close()
+    
 
     def eval_with_variables(self, s):
         from string import Template
@@ -291,7 +294,7 @@ class new_design(Command):
         template = workspace.get_variable("design_template");
         tail = os.path.basename(template)
         if os.path.exists(tail+".git"):
-            log.error("Directory exists: {}".format(tail+".git"))
+            log.error("Directory exists: {}.  Please remove it.".format(tail+".git"))
             sys.exit(1)
 
         if args.in_nvsl:
@@ -308,6 +311,7 @@ class new_design(Command):
             if response.get("errors") is not None:
                 log.error("Couldn't create new repo: {}.".format(response["errors"][0]["message"]))
                 sys.exit(1)
+            log.info(output)
             new_repo = response["ssh_url"]
         else:
             new_repo = "NEW_REPO"
@@ -322,9 +326,14 @@ class new_design(Command):
                 "directory":"Gadgets/Designs",
                 "url" : new_repo,
                 "order": 1000
-            }))
+            }, local=True))
             workspace.write_config()
-        
+        args.directories=["Gadgets/Designs/{name}".format(name=args.name)]
+        args.branch="master"
+        update.go(workspace,args)
+        print "\nYou can create a .gspec file in {path}, and then do 'gtron build {path}'".format( path=args.directories[0])
+
+    
 class update_system(Command):
     """
 
