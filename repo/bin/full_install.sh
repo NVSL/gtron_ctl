@@ -10,7 +10,7 @@ source install_util.sh
 source install_common.sh
 
 popd
-rm -rf .tmp
+#rm -rf .tmp
 
 echo  "Enter your NVSL lab username:"
 read nvsl_user
