@@ -21,8 +21,8 @@ user=$nvsl_user
 
 if ensure_ssh_key; then
     push_ssh_key_to_bb_cluster
-    push_ssh_key_to_github
 fi
+push_ssh_key_to_github
 
 start_ssh_agent
 
@@ -35,7 +35,7 @@ source repo/lib/install_common.sh
 source gtron_env.sh
 banner "Ignore the following warnings..."
 gtron --force update_system --install-apps
-gtron --force setup_devel --nvsl-user $nvsl --github-user $github
+gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
 activate_gadgetron
 
 gtron update
