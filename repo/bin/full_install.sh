@@ -3,8 +3,11 @@
 mkdir .tmp
 pushd .tmp
 
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/git-repos/repo/lib/install_util.sh > install_util.sh
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/git-repos/repo/lib/install_common.sh > install_common.sh
+branch=git-repos
+#branch=develop
+
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
 
 source install_util.sh
 source install_common.sh
@@ -26,7 +29,7 @@ push_ssh_key_to_github
 
 start_ssh_agent
 
-git clone -b git-repos git@github.com:NVSL/gtron_devel.git
+git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
 pushd gtron_devel
 
 source repo/lib/install_util.sh
