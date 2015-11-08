@@ -33,17 +33,22 @@ source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
 source gtron_env.sh
-banner "Ignore the following warnings..."
+banner "Setting up global system configuration.  Ignore the following warnings about misconfiguration..."
 gtron --force update_system --install-apps
+
+banner "Setting up development environment"
 gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
 activate_gadgetron
 
+banner "Checking out everything"
 gtron update
+banner "Building everything"
 gtron build
+banner "Testing everything"
 gtron test
 popd
 
-banner Done!
+banner "Completed Gadgtron setup".
 
 request "You need to do 'cd gtron_devel; source gtron_env.sh;'"
 
