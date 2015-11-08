@@ -892,6 +892,7 @@ class test(make):
     """Run tests in all the repos.  Specifically, run 'make test'."""
     description="Run tests in all the repos."
     help="Run tests in all the repos."
+    log_file_prefix="test"
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
