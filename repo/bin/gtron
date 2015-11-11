@@ -259,6 +259,7 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     else:
         log.info("Executing: " + s);
         try:
+            output = None
             output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
             log.info("Output: \n" + output);
             if stdout != "RETURN_VALUE":
