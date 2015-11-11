@@ -22,7 +22,8 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/CbC"
+            "url": "$NVSL_GIT/CbC",
+	    "order": "700"
         },
         {
             "directory": "Gadgets/Tools",
