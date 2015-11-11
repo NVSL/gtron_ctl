@@ -3,47 +3,57 @@
 mkdir .tmp
 pushd .tmp
 
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/develop/repo/lib/install_util.sh > install_util.sh
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/develop/repo/lib/install_common.sh > install_common.sh
+branch=git-repos
+#branch=develop
+
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
+curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
 
 source install_util.sh
 source install_common.sh
 
 popd
-rm -rf .tmp
+#rm -rf .tmp
 
 echo  "Enter your NVSL lab username:"
-read nvsl
+read nvsl_user
 echo "Enter your github username:"
-read github
+read github_user
+
+user=$nvsl_user
 
 user=$nvsl
 
 if ensure_ssh_key; then
     push_ssh_key_to_bb_cluster
-    push_ssh_key_to_github
 fi
+push_ssh_key_to_github
 
 start_ssh_agent
 
-git clone -b develop git@github.com:NVSL/gtron_devel.git
+git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
 pushd gtron_devel
 
 source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
 source gtron_env.sh
-banner "Ignore the following warnings..."
+banner "Setting up global system configuration.  Ignore the following warnings about misconfiguration..."
 gtron --force update_system --install-apps
-gtron --force setup_devel --nvsl-user $nvsl --github-user $github
+
+banner "Setting up development environment"
+gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
 activate_gadgetron
 
+banner "Checking out everything"
 gtron update
+banner "Building everything"
 gtron build
+banner "Testing everything"
 gtron test
 popd
 
-banner Done!
+banner "Completed Gadgtron setup".
 
 request "You need to do 'cd gtron_devel; source gtron_env.sh;'"
 

@@ -1,3 +1,8 @@
+formencode
+autopep8
+recordclass
+termcolor
+decorator
 cython
 lxml
 pypng
@@ -13,3 +18,4 @@ Sphinx
 asciitree
 rtree
 pyparsing
+colorama

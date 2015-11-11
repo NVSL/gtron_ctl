@@ -17,6 +17,8 @@ import platform
 
 """
 
+dry_run = False;
+
 class TermColors:
     HEADER = '\033[95m'
     OKBLUE = '\033[94m'
@@ -31,6 +33,7 @@ def in_red(s):
     return TermColors.FAIL + s + TermColors.ENDC
 def in_green(s):
     return TermColors.GREEN + s + TermColors.ENDC
+
 def chdir(d):
     log.info("Entering '{}'".format(d))
     if dry_run:
@@ -46,11 +49,17 @@ class Repo:
         self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
         self.stored_order = json.get("order")
         self.local = local
+
         
         if json.get("no_build") is not None:
             self.no_build = True if json.get("no_build").upper() == "TRUE" else False;
         else:
             self.no_build = False
+
+        if json.get("branch") is not None:
+            self.branch = json.get("branch")
+        else:
+            self.branch = None;
             
         if self.stored_order is None:
             self.sort_by = count;
@@ -64,6 +73,8 @@ class Repo:
             r["order"] = self.stored_order
         if self.no_build is True:
             r["no_build"] = "TRUE"
+        if self.branch is not None:
+            r["branch"] = self.branch
         return r
 
     def is_local(self):
@@ -188,7 +199,10 @@ class WorkspaceConfig:
         log.info("Writing out local config file '{}'...".format(self.local_config_file))
         if os.path.exists(self.local_config_file):
             shutil.copyfile(self.local_config_file, self.local_config_file + ".bak")
-        self.write_config_to_file(open(self.local_config_file, "w"), local=True)
+        out =open(self.local_config_file, "w")
+        self.write_config_to_file(out, local=True)
+        out.close()
+    
 
     def eval_with_variables(self, s):
         from string import Template
@@ -237,7 +251,6 @@ class ParseAndDispatch:
         return self.parser.parse_args(argv)
 
 
-dry_run = False;
 
 def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     if dry_run is True:
@@ -246,16 +259,14 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     else:
         log.info("Executing: " + s);
         try:
-            if stdout == "RETURN_VALUE":
-                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
-                log.info("Output: \n" + output);
-            else:
-                subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
-                output = None
+            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+            log.info("Output: \n" + output);
+            if stdout != "RETURN_VALUE":
+                stdout.write(output)
                 
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
-            output = ""
+            e.command_output = output
             raise e
     return output
 
@@ -289,7 +300,7 @@ class new_design(Command):
         template = workspace.get_variable("design_template");
         tail = os.path.basename(template)
         if os.path.exists(tail+".git"):
-            log.error("Directory exists: {}".format(tail+".git"))
+            log.error("Directory exists: {}.  Please remove it.".format(tail+".git"))
             sys.exit(1)
 
         if args.in_nvsl:
@@ -306,6 +317,7 @@ class new_design(Command):
             if response.get("errors") is not None:
                 log.error("Couldn't create new repo: {}.".format(response["errors"][0]["message"]))
                 sys.exit(1)
+            log.info(output)
             new_repo = response["ssh_url"]
         else:
             new_repo = "NEW_REPO"
@@ -320,9 +332,14 @@ class new_design(Command):
                 "directory":"Gadgets/Designs",
                 "url" : new_repo,
                 "order": 1000
-            }))
+            }, local=True))
             workspace.write_config()
-        
+        args.directories=["Gadgets/Designs/{name}".format(name=args.name)]
+        args.branch="master"
+        update.go(workspace,args)
+        print "\nYou can create a .gspec file in {path}, and then do 'gtron build {path}'".format( path=args.directories[0])
+
+    
 class update_system(Command):
     """
 
@@ -420,16 +437,16 @@ class DirectoryCommand(Command):
                                            "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
 
             try: 
-                os.makedirs(repo.container_directory)
+                os.makedirs(workspace.absolute_path(repo.container_directory))
             except OSError:
-                if not os.path.isdir(repo.container_directory):
-                    log.error("Couldn't create directory '{}'".format(repo.container_directory))
+                if not os.path.isdir(workspace.absolute_path(repo.container_directory)):
+                    log.error("Couldn't create directory '{}'".format(workspace.absolute_path(repo.container_directory)))
                     raise
                 
             final_log_file_name=os.path.join(repo.full_directory,
                                              "{}.gtron.log".format(cls.log_file_prefix))
                 
-            if cls.needs_log:
+            if cls.needs_log and not dry_run:
                 log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
                 log.info("Opened {} for logging".format(tmp_log_file_name))
             else:
@@ -437,18 +454,22 @@ class DirectoryCommand(Command):
                 
             try:
                 r = cls.directory_op(repo, workspace, args, log_file)
-                success = r[0]
-                msg = r[1]
-                    
                 if not dry_run and cls.pretty_print:
+                    success = r[0]
+                    msg = r[1]
                     if success:
                         sys.stderr.write(postamble_format.format("", in_green(msg)))
                     else:
                         sys.stderr.write(postamble_format.format("", in_red(msg)))
                             
             except subprocess.CalledProcessError as e:
+
+                log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
+                if log_file is not None:
+                    log_file.close()
+                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
                 if not dry_run and cls.pretty_print:
                     sys.stderr.write(postamble_format.format("", in_red("FAILED")))
                     
@@ -458,20 +479,67 @@ class DirectoryCommand(Command):
                         os.rename(workspace.absolute_path(tmp_log_file_name),
                                   workspace.absolute_path(final_log_file_name));
                         log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
-                    except e:
+                    except Exception as e:
                         log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
         os.chdir(oldPWD)
-        
+
+class cmd(DirectoryCommand):
+    """
+    Run a shell command in all the repos.
+    
+    :param --cmd:  The command to run.
+    """
+    description="Run a shell command in all the repos."
+    help="Run a shell command in all the repos."
+    needs_log=False
+    pretty_print=False
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--cmd",
+                            nargs="+",
+                            dest='cmd',
+                            default=[],
+                            help="Shell command")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        print "============ {} ============".format(repo.full_directory)
+        try:
+            do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
+            return (True, "Success")
+        except Exception as e:
+            log.exception(e)
+            return (False, "Failed")
+
 class update(DirectoryCommand):
     """
 
     Update all the repos.  Depending on whether the repo is in SVN or git, it either does :code:`svn update` or :code:`git update`.
 
+    :param --branch: Move to the branch provided.
+    :param --default-branch: Move to the branch set in the configuration file.
+    
     """
     description="Update all the devel directories"
     help="Get latest updates"
     log_file_prefix="update"
-    
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--branch",
+                            default=None,
+                            help="Branch to checkout (git only)")
+
+        parser.add_argument("--default-branch",
+                            default=False,
+                            action="store_true",
+                            dest="restore_default_branch",
+                            help="Restore repos to the branch specified in workspace configs.")
+
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         try:
@@ -489,10 +557,27 @@ class update(DirectoryCommand):
             protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
+                chdir(workspace.absolute_path(repo.full_directory))
+
+                if args.branch is not None:
+                    branch = args.branch
+                elif repo.branch is not None:
+                    branch = repo.branch
+                elif workspace.get_variable("default_branch") is not None:
+                    branch = workspace.get_variable("default_branch")
+                else:
+                    branch = "master"
+
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
                 else:
+                    if args.restore_default_branch or args.branch is not None:
+                        do_cmd("git checkout {}".format(branch),
+                               stdout=log_file, 
+                               stderr=log_file)
                     do_cmd("git pull", stdout=log_file, stderr=log_file)
+                        
+
             else:
                 log.info("Directory doesn't exist...checking out")
                 if protocol is "SVN":
@@ -500,9 +585,13 @@ class update(DirectoryCommand):
                                                                        repo.url,
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
-                    do_cmd("(cd {} && git clone {} && test -d {} )".format(workspace.absolute_path(repo.container_directory),
-                                                                           repo.url,
-                                                                           repo.repo_directory), stdout=log_file, stderr=log_file)
+                    do_cmd("(cd {} && git clone -b {} {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                                                                                branch,
+                                                                                repo.url,
+                                                                                repo.repo_directory), 
+                           stdout=log_file, 
+                           stderr=log_file)
+
             if not dry_run:
                 return (True, "PASSED")
             
@@ -510,7 +599,7 @@ class update(DirectoryCommand):
         except Exception as e:
             if not dry_run:
                 log_file.write(str(e))
-                return (True, "FAILED")
+                return (False, "FAILED")
             else:
                 log.exception(e)
                 raise e
@@ -587,10 +676,7 @@ class build(make):
             
             args.make_args=[]
             build_result = make.directory_op(repo, workspace, args, log_file)
-            if not build_result[0]:
-                return build_result
-            else:
-                return (True, "SUCCESS")
+            return build_result
         else:
             return (True, "NO BUILD")
 
@@ -751,16 +837,7 @@ class config_cleanup(Command):
     help="Reformat config file"
     @classmethod
     def go(cls, workspace, args):
-        shutil.copyfile(workspace.config_file, workspace.config_file + ".bak")
-        json.dump(workspace.to_json(), sys.stdout,
-                       sort_keys=True,
-                       indent=4,
-                       separators=(',', ': '))
-        workspace.expand_variables()
-        json.dump(workspace.to_json(), sys.stdout,
-                  sort_keys=True,
-                  indent=4,
-                  separators=(',', ': '))
+        workspace.write_config()
 
 class config_dump(Command):
     """
@@ -860,6 +937,7 @@ class test(make):
     """Run tests in all the repos.  Specifically, run 'make test'."""
     description="Run tests in all the repos."
     help="Run tests in all the repos."
+    log_file_prefix="test"
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
@@ -948,6 +1026,7 @@ def main(argv):
     panda.add_command(diff)
     panda.add_command(status)
     panda.add_command(make)
+    panda.add_command(cmd)
     panda.add_command(add_repo)
     panda.add_command(remove_repo)
     panda.add_command(new_design)
