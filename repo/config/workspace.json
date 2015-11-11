@@ -120,6 +120,7 @@
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
         "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
-        "design_template": "$NVSL_GIT/gtron-design-template"
+        "design_template": "$NVSL_GIT/gtron-design-template",
+	"default_branch": "master"
     }
 }

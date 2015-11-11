@@ -17,7 +17,7 @@ fi
 echo Checking out $SVNREPO from svn, and moving it to $GETREPO
 echo If $GITREPO does not exist, this will fail.
 
-git svn clone --authors-file=$MY_HOME/../config/names.mapped $SVNREPO
+git svn clone --authors-file=$MY_HOME/../config/names.mapped svn+ssh://swanson@bbfs-01.calit2.net/grw/Gordon/svn/trunk/Gadgets/$SVNREPO
 cd ${SVN_REPO##*/}
 git remote add origin $GITREPO
 git push -u origin master

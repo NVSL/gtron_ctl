@@ -49,11 +49,17 @@ class Repo:
         self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
         self.stored_order = json.get("order")
         self.local = local
+
         
         if json.get("no_build") is not None:
             self.no_build = True if json.get("no_build").upper() == "TRUE" else False;
         else:
             self.no_build = False
+
+        if json.get("branch") is not None:
+            self.branch = json.get("branch")
+        else:
+            self.branch = None;
             
         if self.stored_order is None:
             self.sort_by = count;
@@ -67,6 +73,8 @@ class Repo:
             r["order"] = self.stored_order
         if self.no_build is True:
             r["no_build"] = "TRUE"
+        if self.branch is not None:
+            r["branch"] = self.branch
         return r
 
     def is_local(self):
@@ -251,16 +259,14 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     else:
         log.info("Executing: " + s);
         try:
-            if stdout == "RETURN_VALUE":
-                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
-                log.info("Output: \n" + output);
-            else:
-                subprocess.check_call(s, shell=True, stderr=stderr, stdout=stdout, stdin=stdin)
-                output = None
+            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+            log.info("Output: \n" + output);
+            if stdout != "RETURN_VALUE":
+                stdout.write(output)
                 
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
-            output = ""
+            e.command_output = output
             raise e
     return output
 
@@ -457,8 +463,13 @@ class DirectoryCommand(Command):
                         sys.stderr.write(postamble_format.format("", in_red(msg)))
                             
             except subprocess.CalledProcessError as e:
+
+                log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
+                if log_file is not None:
+                    log_file.close()
+                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
                 if not dry_run and cls.pretty_print:
                     sys.stderr.write(postamble_format.format("", in_red("FAILED")))
                     
@@ -508,6 +519,9 @@ class update(DirectoryCommand):
 
     Update all the repos.  Depending on whether the repo is in SVN or git, it either does :code:`svn update` or :code:`git update`.
 
+    :param --branch: Move to the branch provided.
+    :param --default-branch: Move to the branch set in the configuration file.
+    
     """
     description="Update all the devel directories"
     help="Get latest updates"
@@ -517,8 +531,14 @@ class update(DirectoryCommand):
     def add_args(cls, parser):
         DirectoryCommand.add_args(parser)
         parser.add_argument("--branch",
-                            default="develop",
+                            default=None,
                             help="Branch to checkout (git only)")
+
+        parser.add_argument("--default-branch",
+                            default=False,
+                            action="store_true",
+                            dest="restore_default_branch",
+                            help="Restore repos to the branch specified in workspace configs.")
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
@@ -538,10 +558,26 @@ class update(DirectoryCommand):
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
                 chdir(workspace.absolute_path(repo.full_directory))
+
+                if args.branch is not None:
+                    branch = args.branch
+                elif repo.branch is not None:
+                    branch = repo.branch
+                elif workspace.get_variable("default_branch") is not None:
+                    branch = workspace.get_variable("default_branch")
+                else:
+                    branch = "master"
+
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
                 else:
+                    if args.restore_default_branch or args.branch is not None:
+                        do_cmd("git checkout {}".format(branch),
+                               stdout=log_file, 
+                               stderr=log_file)
                     do_cmd("git pull", stdout=log_file, stderr=log_file)
+                        
+
             else:
                 log.info("Directory doesn't exist...checking out")
                 if protocol is "SVN":
@@ -549,13 +585,13 @@ class update(DirectoryCommand):
                                                                        repo.url,
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
-                    do_cmd("(cd {} && git clone {} && test -d {} && cd {} && git checkout {})".format(workspace.absolute_path(repo.container_directory),
-                                                                                                      repo.url,
-                                                                                                      repo.repo_directory,
-                                                                                                      repo.repo_directory,
-                                                                                                      args.branch), 
+                    do_cmd("(cd {} && git clone -b {} {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                                                                                branch,
+                                                                                repo.url,
+                                                                                repo.repo_directory), 
                            stdout=log_file, 
                            stderr=log_file)
+
             if not dry_run:
                 return (True, "PASSED")
             
