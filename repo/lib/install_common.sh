@@ -51,9 +51,9 @@ function ensure_ssh_key() {
 }
 
 function push_ssh_key_to_bb_cluster() {
-    if ! ssh -p425 -o PasswordAuthentication=no $user@bbfs-01.calit2.net; then
+    if ! ssh -p425 -o PasswordAuthentication=no $nvsl_user@bbfs-01.calit2.net; then
 	request "Can't log into the cluster without password.  Provide NVSL password to transfer pub key to svn repo"
-	cat ~/.ssh/id_rsa.pub | ssh -p425 $user@bbfs-01.calit2.net "cat >> .ssh/authorized_keys"
+	cat ~/.ssh/id_rsa.pub | ssh -p425 $nvsl_user@bbfs-01.calit2.net "cat >> .ssh/authorized_keys"
     fi
 }
 
@@ -76,7 +76,7 @@ function checkout_gadgetron_root() {
     if ! [ -d "Gadgetron" ]; then
 	mkdir Gadgetron
 	(cd Gadgetron
-	 svn checkout -N svn+ssh://$user@bbfs-01.calit2.net/grw/Gordon/svn/trunk/branches/swanson/git-migration .
+	 svn checkout -N svn+ssh://$nvsl_user@bbfs-01.calit2.net/grw/Gordon/svn/trunk/branches/swanson/git-migration .
 	 ./initial_setup gadgets)
     fi
 }

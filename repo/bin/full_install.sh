@@ -3,8 +3,7 @@
 mkdir .tmp
 pushd .tmp
 
-branch=git-repos
-#branch=develop
+branch=master
 
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
