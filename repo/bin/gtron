@@ -554,19 +554,20 @@ class update(DirectoryCommand):
                         log.error("Couldn't make directory {}.".format(repo.container_directory))
                         raise
 
+
+            if args.branch is not None:
+                branch = args.branch
+            elif repo.branch is not None:
+                branch = repo.branch
+            elif workspace.get_variable("default_branch") is not None:
+                branch = workspace.get_variable("default_branch")
+            else:
+                branch = "master"
+
             protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
                 chdir(workspace.absolute_path(repo.full_directory))
-
-                if args.branch is not None:
-                    branch = args.branch
-                elif repo.branch is not None:
-                    branch = repo.branch
-                elif workspace.get_variable("default_branch") is not None:
-                    branch = workspace.get_variable("default_branch")
-                else:
-                    branch = "master"
 
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
