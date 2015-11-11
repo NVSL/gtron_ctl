@@ -43,7 +43,7 @@ banner "Setting up global system configuration.  Ignore the following warnings a
 gtron --force update_system --install-apps
 
 banner "Setting up development environment (this make take a while).  Ignore errors about misconfiguration."
-gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
+gtron --force setup_devel --github-user $github_user
 activate_gadgetron
 
 banner "Checking out everything"
