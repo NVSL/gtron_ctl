@@ -64,7 +64,7 @@ class Repo:
         if self.stored_order is None:
             self.sort_by = count;
         else:
-            self.sort_by = self.stored_order
+            self.sort_by = int(self.stored_order)
             
     def to_json(self):
         r =  {"url": self.url,
@@ -264,8 +264,8 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_update
                 subprocess.check_call(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin)
                 output=""
             else:
-                output = subprocess.check_call(s, shell=True, stderr=stderr, stdin=stdin)
-                log.info("Output: \n" + output);
+                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+                log.info("Output: \n" + str(output));
                 
                 if stdout != "RETURN_VALUE":
                     stdout.write(output)
