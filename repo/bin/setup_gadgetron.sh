@@ -2,10 +2,13 @@
 
 cd ${0%/*}
 
-if [ ".$1" = "." ]; then
-    echo "usage: setup_gadgetron.sh <bb cluster username>"
+if [ ".$1" = "." ] || [ ".$2" = "." ]; then
+    echo "usage: setup_gadgetron.sh <bb cluster username> <github username>"
 fi 
-echo $1 > ../config/bb_username.txt
+
+gtron --force config_set nvsl_user $1
+gtron --force config_set github_user $2
+gtron --force config_set branch trunk
 
 source ../lib/install_util.sh
 

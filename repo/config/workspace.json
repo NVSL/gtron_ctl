@@ -1,0 +1,126 @@
+{
+    "repos": [
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/BOBBuilder"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_GIT/GadgetronSketchBook"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/dummysch"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Gadgetron"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/CaseMaker"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/CbC",
+	    "order": "700"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Swoop"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Dingo"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Koala"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/GadgetMaker2"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/ucsdgadgetron"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_GIT/JetComponents"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Checkers"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Eagle"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/EagleArt"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/EagleComposer"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/EagleUtil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/GCompiler"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/SVGUtil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/gcam"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/laserTurtle"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/rpiutil"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/util"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_GIT/GadgetronCAM"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_GIT/GadgetronPCBLibs"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "url": "$NVSL_GIT/testGadget"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "no_build": "TRUE",
+            "order": 1000,
+            "url": "$NVSL_GIT/gtron-design-template"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "order": "1000",
+            "url": "$NVSL_GIT/jet"
+        }
+    ],
+    "vars": {
+        "NVSL_GIT": "git@github.com:NVSL",
+        "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
+        "design_template": "$NVSL_GIT/gtron-design-template",
+	"default_branch": "master"
+    }
+}

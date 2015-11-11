@@ -58,11 +58,16 @@ function push_ssh_key_to_bb_cluster() {
 }
 
 function push_ssh_key_to_github() {
-    request  "Visit \n\nhttps://github.com/settings/ssh \n\nand add this key by copying and pasting it into the space provided.  Give it a meaningful name, like 'Gadgetron Development Key'"
-    cat ~/.ssh/id_rsa.pub
+    request "Please enter github password to install ssh key:"
+    sshkey=`cat ~/.ssh/id_rsa.pub`
+    #curl -X POST -H "Content-type: application/json" -d "{\"title\": \"GadgetronDevelopment\",\"key\": \"$sshkey\"}" "https://api.github.com/user/keys
+    curl -H "Content-type: application/json" -X POST -s -u $github_user -d "{\"title\":\"GadgtronDevelopment\",\"key\":\"$sshkey\"}" https://api.github.com/user/keys 
+
+    #    cat ~/.ssh/id_rsa.pub
     
-    request "PRESS RETURN WHEN YOU HAVE DONE SO. (waiting...)"
-    read junk
+    #    request "PRESS RETURN WHEN YOU HAVE DONE SO. (waiting...)"
+    #    (open https://github.com/settings/ssh || google-chrome https://github.com/settings/ssh)
+    #    read junk
 }
 
 function checkout_gadgetron_root() {

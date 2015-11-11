@@ -22,7 +22,6 @@ function error () {
     exit
 }
 
-
 function do_cmd() {
     if [ "$dry_run." = "yes." ]; then
 	echo
@@ -75,7 +74,8 @@ function get_rcs_proto() {
     fi
 }
 
-function checkout() {
+function do_checkout() {
+    echo Deprecated
     RCS=$(get_rcs_proto $1)
     if [ "$RCS" = "GIT" ]; then
 	do_cmd git clone $1
@@ -90,7 +90,8 @@ function get_rcs_dir() {
     echo $dir
 }
 
-function update() {
+function do_update() {
+    echo Deprecated
     RCS=$(get_rcs_dir $1)
     if [ -d $RCS/.git ]; then
 	(do_cmd cd $RCS; do_cmd git pull $1)
@@ -105,14 +106,15 @@ function update() {
 }
 
 function get_or_update() {
+    echo Deprecated
     p=$1
     dir=$(get_rcs_dir $1)
 
     do_cmd rm -f update.log
     (if [ -d "$dir" ]; then
-	 update $p 
+	 do_update $p 
      else
-	 checkout $p
+	 do_checkout $p
      fi) 2>&1 | redirect get_or_update.log
     
     RET=${PIPESTATUS[0]}
@@ -127,6 +129,7 @@ function get_or_update() {
 }
 
 function run_make() {
+    echo Deprecated
     d=$1
     if [ -f "$d/Makefile" -o -f "$d/makefile" ]; then
 	if [ -f "${d}/NO_CLEAN" ]; then
@@ -174,6 +177,7 @@ function print_success() {
 }
 
 function build () {
+    echo Deprecated
     d=$(get_rcs_dir $1)
     if [ "$1" == "--nobuild" ]; then
 	shift
@@ -194,8 +198,8 @@ function build () {
 }
 
 function confirm_venv() {
-    if ! [ `which python` = "$GADGETRON_VENV/bin/python" ];then
-	error "Not in \$GADGETRON_VENV virtual env.  Quiting.  You need to do '. setup_gadgetron'" 
+    if ! gtron sanity_check; then
+	error "Not in \$GADGETRON_VENV virtual env.  Quiting."
 	exit 1
     fi
 }

@@ -42,4 +42,4 @@ fi
 
 fix_up
 
-banner "All done!!!"
+banner "Finished setting up system."

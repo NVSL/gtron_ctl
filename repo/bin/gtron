@@ -1,0 +1,1073 @@
+#!/usr/bin/env python
+
+import argparse
+import sys
+import subprocess
+import os
+import re
+import json
+import pipes
+import shutil
+import logging as log
+import StringIO
+import platform
+
+"""
+
+
+"""
+
+dry_run = False;
+
+class TermColors:
+    HEADER = '\033[95m'
+    OKBLUE = '\033[94m'
+    GREEN = '\033[92m'
+    WARNING = '\033[93m'
+    FAIL = '\033[91m'
+    ENDC = '\033[0m'
+    BOLD = '\033[1m'
+    UNDERLINE = '\033[4m'
+
+def in_red(s):
+    return TermColors.FAIL + s + TermColors.ENDC
+def in_green(s):
+    return TermColors.GREEN + s + TermColors.ENDC
+
+def chdir(d):
+    log.info("Entering '{}'".format(d))
+    if dry_run:
+        print "cd {}".format(d)
+    else:
+        os.chdir(d)
+    
+class Repo:
+    def __init__(self, json, count=0, local=False):
+        self.url = json["url"]
+        self.container_directory = os.path.normpath(json["directory"])
+        self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
+        self.full_directory = os.path.normpath(os.path.join(self.container_directory,self.repo_directory))
+        self.stored_order = json.get("order")
+        self.local = local
+
+        
+        if json.get("no_build") is not None:
+            self.no_build = True if json.get("no_build").upper() == "TRUE" else False;
+        else:
+            self.no_build = False
+
+        if json.get("branch") is not None:
+            self.branch = json.get("branch")
+        else:
+            self.branch = None;
+            
+        if self.stored_order is None:
+            self.sort_by = count;
+        else:
+            self.sort_by = self.stored_order
+            
+    def to_json(self):
+        r =  {"url": self.url,
+              "directory": self.container_directory}
+        if self.stored_order is not None:
+            r["order"] = self.stored_order
+        if self.no_build is True:
+            r["no_build"] = "TRUE"
+        if self.branch is not None:
+            r["branch"] = self.branch
+        return r
+
+    def is_local(self):
+        return self.local
+    
+    def expand_variables(self, workspace):
+        self.url = workspace.eval_with_variables(self.url)
+        self.container_directory = workspace.eval_with_variables(self.container_directory)
+        self.repo_directory = workspace.eval_with_variables(self.repo_directory)
+        self.full_directory = workspace.eval_with_variables(self.full_directory)
+        
+class WorkspaceConfig:
+
+    def __init__(self,devel_root, global_config_file, local_config_file):
+        global_json_data = json.load(open(global_config_file))
+        if os.path.exists(local_config_file):
+            local_json_data = json.load(open(local_config_file))
+        else:
+            local_json_data = {}
+        
+        self.global_config_file = global_config_file
+        self.local_config_file = local_config_file
+        self.devel_root = devel_root
+
+        if global_json_data.get("vars") is not None:
+            self.global_variables = global_json_data["vars"]
+        else:
+            self.global_variables = {}
+            
+        if local_json_data.get("vars") is not None:
+            self.local_variables = local_json_data["vars"]
+        else:
+            self.local_variables = {}
+            
+        order = 500;
+        
+        self.repo_map = {}
+        if global_json_data.get("repos") is not None:
+            for r in global_json_data["repos"]:
+                n = Repo(r, order, local=False);
+                self.add_repo(n);
+                order = order + 1
+
+        if local_json_data.get("repos") is not None:
+            for r in local_json_data["repos"]:
+                n = Repo(r, order, local=True);
+                self.add_repo(n);
+                order = order + 1
+
+    def normalize_path(self, path):
+        log.info(os.path.realpath(path))
+        norm = os.path.abspath(path).replace(self.devel_root+"/","")
+        log.info("Normalized '{}' to '{}'".format(path, norm))
+        return norm
+
+    def path_relative_to_root(self, path):
+        log.info(os.path.realpath(path))
+        norm = os.path.abspath(path).replace(self.devel_root+"/","")
+        log.info("Found dev_root relative path '{}' for '{}'".format(norm, path))
+        return norm
+            
+    def absolute_path(self, path):
+        return os.path.join(self.devel_root, path)
+            
+    def repos(self):
+        return sorted(self.repo_map.itervalues(), cmp=lambda x,y: cmp(x.sort_by, y.sort_by));
+
+    def add_repo(self, r):
+        log.info("Adding repo '{}' -> '{}'".format(r.full_directory, r.url))
+        self.repo_map[r.full_directory] = r
+
+    def remove_repo(self, r):
+        del self.repo_map[r]
+
+    def get_repo(self, directory):
+        return self.repo_map.get(directory)
+    
+    def to_json(self, local=False):
+        if local:
+            return {"vars" : self.local_variables,
+                    "repos" : [r.to_json() for r in self.repos() if r.is_local()]}
+        else:
+            return {"vars" : self.global_variables,
+                    "repos" : [r.to_json() for r in self.repos() if not r.is_local()]}
+            
+
+    def expand_variables(self):
+        for v in self.global_variables:
+            self.global_variables[v] = self.eval_with_variables(self.global_variables[v])
+        for v in self.local_variables:
+            self.local_variables[v] = self.eval_with_variables(self.local_variables[v])
+            
+        repos = self.repos();
+        self.repo_map={};
+        for r in repos:
+            r.expand_variables(self)
+            self.add_repo(r)
+
+    def get_variable(self, name):
+        if self.local_variables.get(name) is None:
+            return self.global_variables[name]
+        else:
+            return self.local_variables[name]
+        
+    def write_config_to_file(self, file, local=False):
+        json.dump(self.to_json(local),
+                  file,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(',', ': '))
+
+    def dump(self):
+        self.write_config_to_file(sys.stdout, local=False)
+        self.write_config_to_file(sys.stdout, local=True)
+        
+    def write_config(self):
+        log.info("Writing out global config file '{}'...".format(self.global_config_file))
+        if os.path.exists(self.global_config_file):
+            shutil.copyfile(self.global_config_file, self.global_config_file + ".bak")
+        self.write_config_to_file(open(self.global_config_file, "w"), local=False)
+
+        log.info("Writing out local config file '{}'...".format(self.local_config_file))
+        if os.path.exists(self.local_config_file):
+            shutil.copyfile(self.local_config_file, self.local_config_file + ".bak")
+        out =open(self.local_config_file, "w")
+        self.write_config_to_file(out, local=True)
+        out.close()
+    
+
+    def eval_with_variables(self, s):
+        from string import Template
+        last = ""
+        new = s
+        while last != new:
+            last = new;
+            t = Template(last).safe_substitute(self.local_variables)
+            new = Template(t).safe_substitute(self.global_variables)
+        return new
+
+    def set_variable(self, key, value, local=False):
+        if local:
+            self.local_variables[key] = value
+        else:
+            self.global_variables[key] = value
+            
+    def unset_variable(self, key, local=False):
+        try:
+            if local:
+                del self.local_variables[key]
+            else:
+                del self.global_variables[key]
+        except:
+            pass
+        
+class Command:
+    @classmethod
+    def setup(cls, subparsers, name, help, description):
+        subparser = subparsers.add_parser(name, help=help, description=description)
+        subparser.set_defaults(func=cls.go)
+        cls.add_args(subparser)
+    @classmethod
+    def add_args(cls, parser):
+        pass
+
+class ParseAndDispatch:
+    def __init__(self, app_desc, subp_title, subp_desc):
+        self.parser = argparse.ArgumentParser(description=app_desc)
+        self.subparsers = self.parser.add_subparsers(title=subp_title,
+                                                     description=subp_desc)
+    def add_command(self, cmd):
+        cmd.setup(self.subparsers, cmd.__name__, cmd.help, cmd.description)
+
+    def parse_args(self, argv):
+        return self.parser.parse_args(argv)
+
+
+
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
+    if dry_run is True:
+        output = ""
+        print s
+    else:
+        log.info("Executing: " + s);
+        try:
+            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+            log.info("Output: \n" + output);
+            if stdout != "RETURN_VALUE":
+                stdout.write(output)
+                
+        except subprocess.CalledProcessError as e:
+            log.info("Command failed  ({}): {}".format(s,e))
+            e.command_output = output
+            raise e
+    return output
+
+
+class new_design(Command):
+    """
+    Create a new design.  It will will on github and will be added as a repo in
+    the local configuration file.
+    
+    :param --name: the name of the design (no spaces) (required)
+    :param --nvsl: Store it under the NVSL organization?  By default, store it under your github account.
+
+    """
+    description="Create a new gadgetron design."
+    help="Create a new gadgetron design."
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--name",
+                            required=True,
+                            dest='name',
+                            help="github username")
+        parser.add_argument("--nvsl",
+                            required=False,
+                            default=False,
+                            action='store_true',
+                            dest='in_nvsl',
+                            help="Create it under the NVSL organization")
+
+    @classmethod
+    def go(cls, workspace,args):
+        template = workspace.get_variable("design_template");
+        tail = os.path.basename(template)
+        if os.path.exists(tail+".git"):
+            log.error("Directory exists: {}.  Please remove it.".format(tail+".git"))
+            sys.exit(1)
+
+        if args.in_nvsl:
+            output = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.get_variable("github_user"), args.name),
+                            stdout="RETURN_VALUE")
+        else:
+            output = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.get_variable("github_user"), args.name),
+                            stdout="RETURN_VALUE")
+
+        if not dry_run:
+            response=json.loads(output)
+            if response.get("errors") is not None:
+                log.error("Couldn't create new repo: {}.".format(response["errors"][0]["message"]))
+                sys.exit(1)
+            log.info(output)
+            new_repo = response["ssh_url"]
+        else:
+            new_repo = "NEW_REPO"
+            
+        do_cmd(workspace.eval_with_variables(("git clone --bare {template_repo} && " +
+                                             "cd {tail}.git && "+ 
+                                             "git push --mirror {new_repo}").format(tail=tail,template_repo=template, new_repo=new_repo)))
+        do_cmd(workspace.eval_with_variables("rm -rf {tail}.git".format(tail=tail)))
+
+        if not dry_run:
+            workspace.add_repo(Repo({
+                "directory":"Gadgets/Designs",
+                "url" : new_repo,
+                "order": 1000
+            }, local=True))
+            workspace.write_config()
+        args.directories=["Gadgets/Designs/{name}".format(name=args.name)]
+        args.branch="master"
+        update.go(workspace,args)
+        print "\nYou can create a .gspec file in {path}, and then do 'gtron build {path}'".format( path=args.directories[0])
+
+    
+class update_system(Command):
+    """
+
+    Update system-wide installations that this workspace requires.  This
+    includes global python library like virtualenv, javascript utilities like
+    node and npm, and applications like Eagle, Google App Engine, and Chrome.
+
+    By default, just update python on node.  With :code:`--install-app`, install everything.
+
+    """
+    description="Update system-wide packagess that Gadgetron depends on"
+    help="Update system for Gadgetron"
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--install-apps",
+                            required=False,
+                            default=False,
+                            action='store_true',
+                            dest='install_apps',
+                            help="Install eagle, chrome, GAE, etc.")
+
+    @classmethod
+    def go(cls, workspace, args):
+        if args.install_apps:
+            do_cmd("update_system.sh --install")
+        else:
+            do_cmd("update_system.sh")
+                        
+class setup_devel(Command):
+    """
+    Perform initial configuration for the workspace (it runs :code:`repo/bin/setup_gadgetron.sh`).  This includes three tasks:
+
+    1.  Initialized :code:`Workspace.local.json`.
+    2.  Setup the python virtual environment for the workspace.
+    3.  Build CGAL.
+
+    :param --nvsl-user: NVSL username (i.e., your name on the BB cluster)
+    :param --github-user:  Your username on github
+    """
+   
+    description="Setup the development environment."
+    help="Setup the devel environment.  You should only need to do this once."
+    
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--nvsl-user",
+                            required=False,
+                            dest='nvsl_user',
+                            help="NVSL username")
+        parser.add_argument("--github-user",
+                            required=False,
+                            dest='github_user',
+                            help="github username")
+
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user))
+
+class DirectoryCommand(Command):
+    log_file_prefix="command"
+    needs_log=True
+    pretty_print=True
+    
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("directories",
+                            nargs="*",
+                            help="Directories to operate on (default: all of them)")
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.expand_variables()
+        if len(args.directories) == 0:
+            repo_list = workspace.repos()
+        else:
+            repo_list = []
+            for d in map(workspace.path_relative_to_root, args.directories):
+                log.info("Running in {}".format(d))
+                r = workspace.get_repo(d)
+                if r is None:
+                    log.error("Couldn't find repo/directory in workspace config: '{}'.".format(d))
+                    sys.exit(1)
+                else:
+                    repo_list.append(r)
+
+        oldPWD = os.getcwd()
+        for repo in repo_list:
+            if not dry_run and cls.pretty_print:
+                preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
+                log.info(preamble);
+                sys.stderr.write(preamble)
+                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+
+                 
+            tmp_log_file_name=os.path.join(repo.container_directory,
+                                           "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
+
+            try: 
+                os.makedirs(workspace.absolute_path(repo.container_directory))
+            except OSError:
+                if not os.path.isdir(workspace.absolute_path(repo.container_directory)):
+                    log.error("Couldn't create directory '{}'".format(workspace.absolute_path(repo.container_directory)))
+                    raise
+                
+            final_log_file_name=os.path.join(repo.full_directory,
+                                             "{}.gtron.log".format(cls.log_file_prefix))
+                
+            if cls.needs_log and not dry_run:
+                log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
+                log.info("Opened {} for logging".format(tmp_log_file_name))
+            else:
+                log_file = None
+                
+            try:
+                r = cls.directory_op(repo, workspace, args, log_file)
+                if not dry_run and cls.pretty_print:
+                    success = r[0]
+                    msg = r[1]
+                    if success:
+                        sys.stderr.write(postamble_format.format("", in_green(msg)))
+                    else:
+                        sys.stderr.write(postamble_format.format("", in_red(msg)))
+                            
+            except subprocess.CalledProcessError as e:
+
+                log.info("here")
+                if cls.needs_log:
+                    log_file.write(str(e))
+                if log_file is not None:
+                    log_file.close()
+                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
+                if not dry_run and cls.pretty_print:
+                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                    
+            finally:
+                if cls.needs_log:
+                    try:
+                        os.rename(workspace.absolute_path(tmp_log_file_name),
+                                  workspace.absolute_path(final_log_file_name));
+                        log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
+                    except Exception as e:
+                        log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
+        os.chdir(oldPWD)
+
+class cmd(DirectoryCommand):
+    """
+    Run a shell command in all the repos.
+    
+    :param --cmd:  The command to run.
+    """
+    description="Run a shell command in all the repos."
+    help="Run a shell command in all the repos."
+    needs_log=False
+    pretty_print=False
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--cmd",
+                            nargs="+",
+                            dest='cmd',
+                            default=[],
+                            help="Shell command")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        print "============ {} ============".format(repo.full_directory)
+        try:
+            do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
+            return (True, "Success")
+        except Exception as e:
+            log.exception(e)
+            return (False, "Failed")
+
+class update(DirectoryCommand):
+    """
+
+    Update all the repos.  Depending on whether the repo is in SVN or git, it either does :code:`svn update` or :code:`git update`.
+
+    :param --branch: Move to the branch provided.
+    :param --default-branch: Move to the branch set in the configuration file.
+    
+    """
+    description="Update all the devel directories"
+    help="Get latest updates"
+    log_file_prefix="update"
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--branch",
+                            default=None,
+                            help="Branch to checkout (git only)")
+
+        parser.add_argument("--default-branch",
+                            default=False,
+                            action="store_true",
+                            dest="restore_default_branch",
+                            help="Restore repos to the branch specified in workspace configs.")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        try:
+            if dry_run:
+                print "Create directory {}, if needed.".format(repo.container_directory)
+            else:
+                try:
+                    log.info("Making directory {}".format(repo.container_directory))
+                    os.makedirs(os.path.join(workspace.devel_root, repo.container_directory))
+                except OSError as e:
+                    if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
+                        log.error("Couldn't make directory {}.".format(repo.container_directory))
+                        raise
+
+            protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+            if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
+                log.info("Directory exists...updating")
+                chdir(workspace.absolute_path(repo.full_directory))
+
+                if args.branch is not None:
+                    branch = args.branch
+                elif repo.branch is not None:
+                    branch = repo.branch
+                elif workspace.get_variable("default_branch") is not None:
+                    branch = workspace.get_variable("default_branch")
+                else:
+                    branch = "master"
+
+                if protocol is "SVN":
+                    do_cmd("svn update", stdout=log_file, stderr=log_file)
+                else:
+                    if args.restore_default_branch or args.branch is not None:
+                        do_cmd("git checkout {}".format(branch),
+                               stdout=log_file, 
+                               stderr=log_file)
+                    do_cmd("git pull", stdout=log_file, stderr=log_file)
+                        
+
+            else:
+                log.info("Directory doesn't exist...checking out")
+                if protocol is "SVN":
+                    do_cmd("(cd {} && svn co {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                                                                       repo.url,
+                                                                       repo.repo_directory), stdout=log_file, stderr=log_file)
+                else:
+                    do_cmd("(cd {} && git clone -b {} {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                                                                                branch,
+                                                                                repo.url,
+                                                                                repo.repo_directory), 
+                           stdout=log_file, 
+                           stderr=log_file)
+
+            if not dry_run:
+                return (True, "PASSED")
+            
+
+        except Exception as e:
+            if not dry_run:
+                log_file.write(str(e))
+                return (False, "FAILED")
+            else:
+                log.exception(e)
+                raise e
+            
+class ubt(DirectoryCommand):
+    """Update, build, and test all the repos.  Equivalent to
+
+.. code-block:: shell
+      
+    gtron update
+    gtron build
+    gtron test
+"""
+    description="Update, build, and test all the repos."
+    help="Update, build, and test all the repos."
+    
+    @classmethod
+    def go(cls, workspace, args):
+        update.go(workspace,args)
+        build.go(workspace,args)                
+        test.go(workspace,args)                
+
+class make(DirectoryCommand):
+    """ Run :code:`make` in all the repos.
+
+    You can pass arguments to :code:`make` with the :code:`--args` flag.
+    
+    """
+
+    description="Run arbitrary 'make' command in each repo"
+    help="Run make everywhere"
+    log_file_prefix="make"
+    
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--args",
+                            nargs="+",
+                            dest='make_args',
+                            default=[],
+                            help="Arguments for 'make'")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
+        if (os.path.exists(workspace.absolute_path(os.path.join(repo.full_directory, "makefile"))) or
+            os.path.exists(workspace.absolute_path(os.path.join(repo.full_directory, "Makefile")))):
+            do_cmd(make_cmd, stdout=log_file, stderr=log_file)
+            return (True, "SUCCESS")
+        else:
+            return (True, "No Makefile")
+
+class build(make):
+    """ Build all the repos.  This is equivalent to 
+
+.. code-block:: shell
+      
+    gtron make --args clean
+    gtron make
+    
+    """
+    description="Run build in all the devel directories"
+    help="Build everything"
+    log_file_prefix="build"
+        
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        if not repo.no_build:
+            args.make_args=["clean"]
+            clean_result = make.directory_op(repo, workspace, args, log_file)
+            if not clean_result[0]:
+                return clean_result
+            
+            args.make_args=[]
+            build_result = make.directory_op(repo, workspace, args, log_file)
+            return build_result
+        else:
+            return (True, "NO BUILD")
+
+class list_repos(Command):
+    """
+    Print a list of all the repos.  With the :code:`--eval` option, expand variables first.
+    """
+    
+    description="List repositories that are part of this workspace"
+    help="List repositories"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--eval",
+                            required=False,
+                            action='store_true',
+                            default=False,
+                            help="Expand variables")
+
+    @classmethod
+    def go(cls, workspace, args):
+        if args.eval:
+            workspace.expand_variables()
+        for repo in workspace.repos():
+            print "{}: {}".format(repo.full_directory, repo.url)
+                
+
+class config_lint(Command):
+    description="Parse and writout workspace.json"
+    help="Check config syntax"
+    @classmethod
+    def go(cls, workspace, args):
+        pass
+
+class config_set(Command):
+    """Set a variable in the configuration file.
+    
+    It takes a key-value pair as two positional parameters.  For example:
+
+    .. code-block:: shell
+    
+      gtron config_set foo bar
+    
+    Sets variable :code:`foo` to :code:`"bar"`.  You can include variables in the
+    value, but make sure you escape them properly, or the shell will expand them before gtron gets them.
+    """
+    
+    description="Set variable value in config file"
+    help="Set variable in config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("kv",
+                            nargs=2,
+                            metavar=("variable", "value"),
+                            help="Set <variable>=<value>")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.set_variable(args.kv[0], args.kv[1], local=args.local)
+        workspace.write_config()
+
+class add_repo(Command):
+    """Add a repo to the workspace.
+    
+    :param --repo: Git or SVN URL for the repo.
+    :param --direcotry: Directory that the repo should reside in.
+    
+    """
+    description="Add a repository to checkout as part of this workspace"
+    help="Add a repository"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--repo",
+                            required=True,
+                            dest="repo",
+                            help="Repository URL")
+        parser.add_argument("--directory",
+                            required=True,
+                            dest="directory",
+                            help="Directory where the repo should live")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
+
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.add_repo(Repo({"url": args.repo, "directory":args.directory}, local=args.local))
+        workspace.write_config()
+
+class remove_repo(Command):
+    """
+    Remove a repo.
+    
+    :param --directory: The repo directory to remove.
+
+    """
+    
+    description="Remove a repository to checkout as part of this workspace"
+    help="Remove a repository"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--directory",
+                            required=True,
+                            dest="directory",
+                            help="Directory holds the contents of the repo")
+        
+    @classmethod
+    def go(cls, workspace, args):
+        found = False
+        if workspace.get_repo(args.directory) is not None:
+            workspace.remove_repo(args.directory)
+        else:
+            log.error("Couldn't find repo that lives in {}.".format(args.directory))
+            sys.exit(1)
+        workspace.write_config()
+
+class config_unset(Command):
+    """
+    Remove a variable from the configuration file.  It takes the name of the variable as a single parameter.
+    """
+    description="Remove variable from config file"
+    help="Remove variable from config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("k",
+                            metavar="variable",
+                            help="Variable to remove")
+        parser.add_argument("--global",
+                            required=False,
+                            default=True,
+                            dest="local",
+                            action="store_false",
+                            help="Add this to global config")
+                
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.unset_variable(args.k, local=args.local)
+        workspace.write_config()
+
+class config_cleanup(Command):
+    """
+    Reformat the configuration files by loading them and writing them back out.
+    """
+    description="Reformat config file"
+    help="Reformat config file"
+    @classmethod
+    def go(cls, workspace, args):
+        workspace.write_config()
+
+class config_dump(Command):
+    """
+    Parse the configuration files and print them out.
+    
+    :param --expand: Expand variable before displaying the configuration.
+
+    """
+    description="Parse, re-serialize, and print config file"
+    help="Print config file"
+
+    @classmethod
+    def add_args(cls, parser):
+        parser.add_argument("--expand",
+                            required=False,
+                            default=False,
+                            action="store_true",
+                            dest="expand",
+                            help="Expand all variables")
+
+    @classmethod
+    def go(cls, workspace, args):
+        if args.expand:
+            workspace.expand_variables()
+        json.dump(workspace.to_json(), sys.stdout,
+                  sort_keys=True,
+                  indent=4,
+                  separators=(', ', ' : '))
+
+class diff(DirectoryCommand):
+    """Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
+    description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
+    help="Run diff of each repo."
+    needs_log=False
+    pretty_print=False
+    
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+        sys.stdout.flush()
+        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+        if protocol is "SVN":
+            do_cmd("svn diff")
+        else:
+            do_cmd("git --no-pager diff")
+        return (True, None)
+
+class status(DirectoryCommand):
+    """Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."""
+    description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
+    help="Run 'status' on each repo"
+    needs_log=False
+    pretty_print=False
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        sys.stdout.write("{:=^80}\n".format(repo.full_directory))
+        sys.stdout.flush()
+        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+        if protocol is "SVN":
+            do_cmd("svn status")
+        else:
+            do_cmd("git status")
+        return (True, None)
+
+class sanity_check(Command):
+    description="Run a sanity check on the environment"
+    help="Run sanity check"
+    @classmethod
+    def go(cls, workspace, args):
+        pass # it's a noop, becaue we always run a sanity check.
+
+class cleanup(Command):
+    """Cleanup all the log files that gtron creates."""
+    
+    description="Cleanup all the files that gtron creates"
+    help="Cleanup after gtron"
+    @classmethod
+    def go(cls, workspace, args):
+        do_cmd("find . -name '*.gtron.log'| xargs rm -rf")
+
+class full_docs(Command):
+    """Build and open the manual in a web browser"""
+    description="Build the html docs and open them"
+    help="Build the html docs and open them"
+    @classmethod
+    def go(cls, workspace, args):
+        directory=workspace.absolute_path("repo/doc")
+        if platform.system() == "Darwin":
+            do_cmd("cd {} && make html && open _build/html/index.html".format(directory))
+        elif platform.system() == "Linux":
+            do_cmd("cd {} && make html && google-chrome _build/html/index.html".format(directory))
+
+class test(make):
+    """Run tests in all the repos.  Specifically, run 'make test'."""
+    description="Run tests in all the repos."
+    help="Run tests in all the repos."
+    log_file_prefix="test"
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        args.make_args=["test"]
+        result = make.directory_op(repo, workspace, args, log_file)
+        if not result[0]:
+            return (False, "FAILED")
+        else:
+            return (True, "SUCCESS")
+    
+def sanity(workspace):
+
+    #workspace.expand_variables()
+    if os.environ.get("GADGETRON_ROOT") is None:
+        log.warn("$GADGETRON_ROOT is not set.")
+        return False;
+    if os.path.dirname(os.environ.get("GADGETRON_ROOT")) != workspace.devel_root:
+        log.warn("$GADGETRON_ROOT ({}) doesn't correspond to this workspace's root ({}).".format(os.environ["GADGETRON_ROOT"], workspace.devel_root))
+        return False
+    if os.path.dirname(sys.executable) != os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin"):
+        #log.warn(os.path.dirname(sys.executable))
+        #log.warn(os.path.join(workspace.devel_root, "repo","venv","Gadgetron","bin"))
+        log.warn("Python executable ({}) is not in workspace virtual environment ({})".format(sys.executable,
+                                                                                              os.path.join(workspace.devel_root,
+                                                                                                           "repo",
+                                                                                                           "venv",
+                                                                                                           "Gadgetron")))
+        return False
+    return True;
+    
+def main(argv):
+
+    panda = ParseAndDispatch("Workspace manager for Gadgetron",
+                             "Available commands",
+                             "You can call these")
+
+    panda.parser.add_argument("-n",
+                              dest='dry_run',
+                              default=False,
+                              action='store_true',
+                              help="Just print what would be done")
+
+    dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)),"..",".."))
+    global_config = os.path.join(dev_root,"repo","config","workspace.json")
+    local_config = os.path.join(dev_root,"repo","config","workspace.local.json")
+
+    panda.parser.add_argument("--root",
+                              dest='devel_root',
+                              default=dev_root,
+                              help="Workspace root.  Default: {}".format(dev_root))
+
+    panda.parser.add_argument("--config",
+                              dest='global_config_file',
+                              default=global_config,
+                              help="Global configuration file to use.  Default: {}".format(global_config))
+
+    panda.parser.add_argument("--local-config",
+                              dest='local_config_file',
+                              default=local_config,
+                              help="Local configuration file to use.  Default: {}".format(local_config))
+
+    panda.parser.add_argument("--force",
+                              dest='force',
+                              default=False,
+                              action="store_true",
+                              help="Perform actions even if your configuration seems strange")
+
+    panda.parser.add_argument("--dump-after",
+                              dest='dump',
+                              default=False,
+                              action="store_true",
+                              help="Dump the contents of the config file after completing the command")
+
+    panda.parser.add_argument("-v",
+                              required=False,
+                              action='store_true',
+                              default=False,
+                              dest='verbose',
+                              help="Be verbose")
+    
+    panda.add_command(full_docs)
+    panda.add_command(update)
+    panda.add_command(build)
+    panda.add_command(test)
+    panda.add_command(ubt)
+    panda.add_command(diff)
+    panda.add_command(status)
+    panda.add_command(make)
+    panda.add_command(cmd)
+    panda.add_command(add_repo)
+    panda.add_command(remove_repo)
+    panda.add_command(new_design)
+    panda.add_command(sanity_check)
+    panda.add_command(cleanup)
+
+
+    panda.add_command(update_system)
+    panda.add_command(setup_devel)
+    panda.add_command(list_repos)
+    panda.add_command(config_lint)
+    panda.add_command(config_cleanup)
+    panda.add_command(config_set)
+    panda.add_command(config_unset)
+    panda.add_command(config_dump)
+
+
+    args = panda.parse_args(argv[1:])
+
+    if args.verbose:
+        log.basicConfig(format="%(levelname)s: %(message)s", level=log.INFO)#DEBUG)
+        log.info("Verbose output.")
+    else:
+        log.basicConfig(format="%(levelname)s: %(message)s")
+
+
+    global dry_run;
+    dry_run = args.dry_run;
+
+    workspace = WorkspaceConfig(args.devel_root, args.global_config_file, args.local_config_file)
+    if not sanity(workspace):
+        if args.force:
+            log.warning("Continuing despite misconfiguration")
+        else:
+            log.error("Quiting, due to misconfiguration")
+            sys.exit(1);
+    
+            #os.chdir(workspace.devel_root);
+    args.func(workspace, args)
+    if args.dump:
+        workspace.dump()
+
+if __name__ == "__main__":
+    main(sys.argv)
