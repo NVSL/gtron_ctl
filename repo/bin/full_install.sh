@@ -27,9 +27,7 @@ user=$nvsl_user
 
 user=$nvsl
 
-#if ensure_ssh_key; then
-#    push_ssh_key_to_bb_cluster
-#fi
+ensure_ssh_key
 push_ssh_key_to_github
 
 start_ssh_agent
