@@ -8,7 +8,7 @@ fi
 
 gtron --force config_set nvsl_user $1
 gtron --force config_set github_user $2
-gtron --force config_set branch trunk
+#gtron --force config_set branch master
 
 source ../lib/install_util.sh
 

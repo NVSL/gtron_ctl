@@ -252,7 +252,7 @@ class ParseAndDispatch:
 
 
 
-def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False):
     if dry_run is True:
         output = ""
         print s
@@ -260,10 +260,15 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
         log.info("Executing: " + s);
         try:
             output = None
-            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
-            log.info("Output: \n" + output);
-            if stdout != "RETURN_VALUE":
-                stdout.write(output)
+            if live_updates:
+                subprocess.check_call(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin)
+                output=""
+            else:
+                output = subprocess.check_call(s, shell=True, stderr=stderr, stdin=stdin)
+                log.info("Output: \n" + output);
+                
+                if stdout != "RETURN_VALUE":
+                    stdout.write(output)
                 
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
@@ -365,9 +370,9 @@ class update_system(Command):
     @classmethod
     def go(cls, workspace, args):
         if args.install_apps:
-            do_cmd("update_system.sh --install")
+            do_cmd("update_system.sh --install", live_updates=True)
         else:
-            do_cmd("update_system.sh")
+            do_cmd("update_system.sh", live_updates=True)
                         
 class setup_devel(Command):
     """

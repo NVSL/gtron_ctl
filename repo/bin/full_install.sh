@@ -3,7 +3,11 @@
 mkdir .tmp
 pushd .tmp
 
-branch=master
+if [ "$1." = "." ]; then
+    branch=master
+else
+    branch=$1
+fi
 
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
@@ -14,8 +18,8 @@ source install_common.sh
 popd
 #rm -rf .tmp
 
-echo  "Enter your NVSL lab username:"
-read nvsl_user
+#echo  "Enter your NVSL lab username:"
+#read nvsl_user
 echo "Enter your github username:"
 read github_user
 
@@ -23,9 +27,9 @@ user=$nvsl_user
 
 user=$nvsl
 
-if ensure_ssh_key; then
-    push_ssh_key_to_bb_cluster
-fi
+#if ensure_ssh_key; then
+#    push_ssh_key_to_bb_cluster
+#fi
 push_ssh_key_to_github
 
 start_ssh_agent
@@ -40,7 +44,7 @@ source gtron_env.sh
 banner "Setting up global system configuration.  Ignore the following warnings about misconfiguration..."
 gtron --force update_system --install-apps
 
-banner "Setting up development environment"
+banner "Setting up development environment (this make take a while).  Ignore errors about misconfiguration."
 gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
 activate_gadgetron
 
