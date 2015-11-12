@@ -626,6 +626,12 @@ class ubt(DirectoryCommand):
 """
     description="Update, build, and test all the repos."
     help="Update, build, and test all the repos."
+
+    @classmethod
+    def add_args(cls, parser):
+        update.add_args(parser)
+        #build.add_args(parser)
+        #test.add_args(parser)
     
     @classmethod
     def go(cls, workspace, args):
@@ -1068,10 +1074,8 @@ def main(argv):
     dry_run = args.dry_run;
 
     workspace = WorkspaceConfig(args.devel_root, args.global_config_file, args.local_config_file)
-    if not sanity(workspace):
-        if args.force:
-            log.warning("Continuing despite misconfiguration")
-        else:
+    if not args.force:
+        if not sanity(workspace):
             log.error("Quiting, due to misconfiguration")
             sys.exit(1);
     
