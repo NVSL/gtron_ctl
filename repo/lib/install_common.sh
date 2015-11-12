@@ -47,7 +47,7 @@ function install_global_python() {
 
 function install_global_javascript() {
     banner "Installing global javascript resources..."
-    $SUDO npm install -g $(cat ../config/global_node.txt) | save_log install_global_javascript
+    $SUDO npm install -g $(cat ../config/global_node.txt) 2>&1 | save_log install_global_javascript
 }
 
 function ensure_ssh_key() {
