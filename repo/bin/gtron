@@ -477,11 +477,12 @@ class DirectoryCommand(Command):
                 log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
-                if log_file is not None:
-                    log_file.close()
-                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
                 if not dry_run and cls.pretty_print:
                     sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                if log_file is not None:
+                    log_file.close()
+                    log.warning("Last 10 lines of command output:")
+                    log.warning("".join(open(workspace.absolute_path(tmp_log_file_name), "r").readlines()[-10:]))
                     
             finally:
                 if cls.needs_log:
