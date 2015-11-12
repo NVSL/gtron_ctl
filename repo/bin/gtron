@@ -39,7 +39,11 @@ def chdir(d):
     if dry_run:
         print "cd {}".format(d)
     else:
-        os.chdir(d)
+        try:
+            os.chdir(d)
+        except Exception as e:
+            log.error("Can't change to {}".format(d))
+            sys.exit(1)
     
 class Repo:
     def __init__(self, json, count=0, local=False):
