@@ -62,5 +62,5 @@ function fix_up() {
     # apt-get uses a non-standard name for the nodejs executable, which causes problems.
     ($SUDO ln -sf `which nodejs` /usr/local/bin/node 
      $SUDO chown -R gadgetron ~/.npm
-     $SUDO chgrp -R gadgetron ~/.npm) | save_log fix_up
+     $SUDO chgrp -R gadgetron ~/.npm) 2>&1 | save_log fix_up
 }
