@@ -406,7 +406,7 @@ class setup_devel(Command):
 
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user))
+        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user), live_updates=True)
 
 class DirectoryCommand(Command):
     log_file_prefix="command"
