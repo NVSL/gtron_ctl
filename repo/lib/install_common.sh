@@ -53,7 +53,7 @@ function install_global_javascript() {
 function ensure_ssh_key() {
     if ! [ -e ~/.ssh/id_rsa.pub ]; then 
 	request "Generating public key." #  Please accept all the defaults"
-	echo -ne "\n\n\n" | ssh-keygen
+	(unset DISPLAY; echo -ne "\n\n\n" | ssh-keygen -N "" )
 	true
     else
 	false
@@ -68,7 +68,7 @@ function push_ssh_key_to_bb_cluster() {
 }
 
 function push_ssh_key_to_github() {
-    request "Please enter github password to install ssh key:"
+    request "Enter your Github password:"
     sshkey=`cat ~/.ssh/id_rsa.pub`
     #curl -X POST -H "Content-type: application/json" -d "{\"title\": \"GadgetronDevelopment\",\"key\": \"$sshkey\"}" "https://api.github.com/user/keys
     curl -H "Content-type: application/json" -X POST -s -u $github_user -d "{\"title\":\"GadgtronDevelopment\",\"key\":\"$sshkey\"}" https://api.github.com/user/keys 
