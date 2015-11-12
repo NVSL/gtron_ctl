@@ -20,14 +20,17 @@ popd
 
 #echo  "Enter your NVSL lab username:"
 #read nvsl_user
-echo "Enter your github username:"
-read github_user
 
 user=$nvsl_user
-
 user=$nvsl
 
+echo "Enter your password on this machine:"
+sudo true
+
 ensure_ssh_key
+
+echo "Enter your github username:"
+read github_user
 push_ssh_key_to_github
 
 start_ssh_agent
