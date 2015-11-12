@@ -10,7 +10,7 @@ function check_for_package_manager() {
 
 function install_system_packages() {
     #install system-wide packages
-    banner "Installing system-wide packages (this will take a while).  Please enter your password for this machine."
+    banner "Installing system-wide packages (this may take a while)."
     
     $SUDO apt-get -y install python-pip libspatialindex-dev python-pygame libcgal-dev swig inkscape curl nodejs npm subversion emacs git cython python-lxml npm swig libpython-dev libxml2 libxml2-dev libxslt1-dev arduino vim | save_log install_system_packages
     #sudo apt-get remove arduino #  It's the wrong version, but it gives us all the support libs (E.g., java)
@@ -62,5 +62,5 @@ function fix_up() {
     # apt-get uses a non-standard name for the nodejs executable, which causes problems.
     ($SUDO ln -sf `which nodejs` /usr/local/bin/node 
      $SUDO chown -R gadgetron ~/.npm
-     $SUDO chgrp -R gadgetron ~/.npm) | save_log fix_up
+     $SUDO chgrp -R gadgetron ~/.npm) 2>&1 | save_log fix_up
 }

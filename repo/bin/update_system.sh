@@ -36,8 +36,8 @@ if [ "$1." = "--install." ]; then
     install_eagle 
     install_arduino 
     install_GAE 
-    init_github 
-    setup_user_ssh
+    #init_github 
+    #setup_user_ssh
 fi
 
 fix_up

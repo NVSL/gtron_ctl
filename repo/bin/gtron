@@ -39,7 +39,11 @@ def chdir(d):
     if dry_run:
         print "cd {}".format(d)
     else:
-        os.chdir(d)
+        try:
+            os.chdir(d)
+        except Exception as e:
+            log.error("Can't change to {}".format(d))
+            sys.exit(1)
     
 class Repo:
     def __init__(self, json, count=0, local=False):
@@ -64,7 +68,7 @@ class Repo:
         if self.stored_order is None:
             self.sort_by = count;
         else:
-            self.sort_by = self.stored_order
+            self.sort_by = int(self.stored_order)
             
     def to_json(self):
         r =  {"url": self.url,
@@ -252,7 +256,7 @@ class ParseAndDispatch:
 
 
 
-def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False):
     if dry_run is True:
         output = ""
         print s
@@ -260,10 +264,15 @@ def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
         log.info("Executing: " + s);
         try:
             output = None
-            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
-            log.info("Output: \n" + output);
-            if stdout != "RETURN_VALUE":
-                stdout.write(output)
+            if live_updates:
+                subprocess.check_call(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin)
+                output=""
+            else:
+                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+                log.info("Output: \n" + str(output));
+                
+                if stdout != "RETURN_VALUE":
+                    stdout.write(output)
                 
         except subprocess.CalledProcessError as e:
             log.info("Command failed  ({}): {}".format(s,e))
@@ -365,9 +374,9 @@ class update_system(Command):
     @classmethod
     def go(cls, workspace, args):
         if args.install_apps:
-            do_cmd("update_system.sh --install")
+            do_cmd("update_system.sh --install", live_updates=True)
         else:
-            do_cmd("update_system.sh")
+            do_cmd("update_system.sh", live_updates=True)
                         
 class setup_devel(Command):
     """
@@ -397,7 +406,7 @@ class setup_devel(Command):
 
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user))
+        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user), live_updates=True)
 
 class DirectoryCommand(Command):
     log_file_prefix="command"
@@ -468,11 +477,12 @@ class DirectoryCommand(Command):
                 log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
-                if log_file is not None:
-                    log_file.close()
-                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
                 if not dry_run and cls.pretty_print:
                     sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                if log_file is not None:
+                    log_file.close()
+                    log.warning("Last 10 lines of command output:")
+                    log.warning("".join(open(workspace.absolute_path(tmp_log_file_name), "r").readlines()[-10:]))
                     
             finally:
                 if cls.needs_log:
@@ -617,6 +627,12 @@ class ubt(DirectoryCommand):
 """
     description="Update, build, and test all the repos."
     help="Update, build, and test all the repos."
+
+    @classmethod
+    def add_args(cls, parser):
+        update.add_args(parser)
+        #build.add_args(parser)
+        #test.add_args(parser)
     
     @classmethod
     def go(cls, workspace, args):
@@ -1059,10 +1075,8 @@ def main(argv):
     dry_run = args.dry_run;
 
     workspace = WorkspaceConfig(args.devel_root, args.global_config_file, args.local_config_file)
-    if not sanity(workspace):
-        if args.force:
-            log.warning("Continuing despite misconfiguration")
-        else:
+    if not args.force:
+        if not sanity(workspace):
             log.error("Quiting, due to misconfiguration")
             sys.exit(1);
     

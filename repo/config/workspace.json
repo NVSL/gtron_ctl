@@ -101,20 +101,20 @@
             "url": "$NVSL_GIT/testGadget"
         },
         {
+            "directory": "Gadgets/Tools",
+            "order": "700",
+            "url": "$NVSL_GIT/CbC"
+        },
+        {
             "directory": "Gadgets/Designs",
             "no_build": "TRUE",
-            "order": 1000,
+            "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
         },
         {
             "directory": "Gadgets/Tools",
             "order": "1000",
             "url": "$NVSL_GIT/jet"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "order": "700",
-            "url": "$NVSL_GIT/CbC"
         }
     ],
     "vars": {
