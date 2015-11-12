@@ -71,7 +71,7 @@ function push_ssh_key_to_github() {
     request "Enter your Github password:"
     sshkey=`cat ~/.ssh/id_rsa.pub`
     #curl -X POST -H "Content-type: application/json" -d "{\"title\": \"GadgetronDevelopment\",\"key\": \"$sshkey\"}" "https://api.github.com/user/keys
-    curl -H "Content-type: application/json" -X POST -s -u $github_user -d "{\"title\":\"GadgtronDevelopment\",\"key\":\"$sshkey\"}" https://api.github.com/user/keys 
+    curl -H "Content-type: application/json" -X POST -s -u $github_user -d "{\"title\":\"GadgtronDevelopment\",\"key\":\"$sshkey\"}" https://api.github.com/user/keys |save_log push_ssh_key
 
     #    cat ~/.ssh/id_rsa.pub
     
