@@ -1,3 +1,13 @@
+
+function load_platform_install_utils() {
+    if [ "$(uname)." = "Darwin." ]; then
+	source ../lib/install_mac.sh
+    else
+	source ../lib/install_ubuntu.sh
+	SUDO="sudo -H"
+    fi
+}
+
 function init_github() {
     request "Making github work easily (say 'yes')"
     (git clone git@github.com:NVSL/gadgetron-vm-util.git
@@ -42,8 +52,8 @@ function install_global_javascript() {
 
 function ensure_ssh_key() {
     if ! [ -e ~/.ssh/id_rsa.pub ]; then 
-	request "Generating public key.  Please accept all the defaults"
-	ssh-keygen
+	request "Generating public key." #  Please accept all the defaults"
+	echo -ne "\n\n\n" | ssh-keygen
 	true
     else
 	false
