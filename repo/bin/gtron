@@ -444,7 +444,7 @@ class DirectoryCommand(Command):
 
                  
             tmp_log_file_name=os.path.join(repo.container_directory,
-                                           "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
+                                           "{}-{}.gtron-log.txt".format(repo.repo_directory, cls.log_file_prefix))
 
             try: 
                 os.makedirs(workspace.absolute_path(repo.container_directory))
@@ -454,7 +454,7 @@ class DirectoryCommand(Command):
                     raise
                 
             final_log_file_name=os.path.join(repo.full_directory,
-                                             "{}.gtron.log".format(cls.log_file_prefix))
+                                             "{}.gtron-log.txt".format(cls.log_file_prefix))
                 
             if cls.needs_log and not dry_run:
                 log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
@@ -937,7 +937,7 @@ class cleanup(Command):
     help="Cleanup after gtron"
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("find . -name '*.gtron.log'| xargs rm -rf")
+        do_cmd("find . -name '*.gtron-log.txt'| xargs rm -rf")
 
 class full_docs(Command):
     """Build and open the manual in a web browser"""
