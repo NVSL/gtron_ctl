@@ -35,15 +35,15 @@ function save_log () {
     mkdir -p ../logs
     if [ "$verbose." = "yes." ]; then
 	if [ ".$1" = ".-a" ];then
-	    tee -a ../logs/$2.log
+	    tee -a ../logs/$2.gtron-log.txt
 	else
-	    tee ../logs/$1.log
+	    tee ../logs/$1.gtron-log.txt
 	fi
     else
 	if [ ".$1" = ".-a" ];then
-	    cat >> ../logs/$2.log
+	    cat >> ../logs/$2.gtron-log.txt
 	else
-	    cat > ../logs/$1.log
+	    cat > ../logs/$1.gtron-log.txt
 	fi
     fi
 }
