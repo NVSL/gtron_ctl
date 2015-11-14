@@ -93,6 +93,12 @@ class Repo:
 class WorkspaceConfig:
 
     def __init__(self,devel_root, global_config_file, local_config_file):
+        self.load(devel_root, global_config_file, local_config_file)
+        
+    def reload(self):
+        self.load(self.devel_root, self.global_config_file, self.local_config_file)
+
+    def load(self,devel_root, global_config_file, local_config_file):
         global_json_data = json.load(open(global_config_file))
         if os.path.exists(local_config_file):
             local_json_data = json.load(open(local_config_file))
@@ -419,7 +425,17 @@ class DirectoryCommand(Command):
                             nargs="*",
                             help="Directories to operate on (default: all of them)")
     @classmethod
+    def pre_flight(cls, workspace, args):
+        pass
+        
+    @classmethod
+    def post_flight(cls, workspace, args):
+        pass
+        
+    @classmethod
     def go(cls, workspace, args):
+        oldPWD = os.getcwd()
+        cls.pre_flight(workspace, args)
         workspace.expand_variables()
         if len(args.directories) == 0:
             repo_list = workspace.repos()
@@ -434,7 +450,6 @@ class DirectoryCommand(Command):
                 else:
                     repo_list.append(r)
 
-        oldPWD = os.getcwd()
         for repo in repo_list:
             if not dry_run and cls.pretty_print:
                 preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
@@ -493,6 +508,7 @@ class DirectoryCommand(Command):
                     except Exception as e:
                         log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
         os.chdir(oldPWD)
+        cls.post_flight(workspace, args)
 
 class cmd(DirectoryCommand):
     """
@@ -553,6 +569,12 @@ class update(DirectoryCommand):
                             dest="restore_default_branch",
                             help="Restore repos to the branch specified in workspace configs.")
 
+    @classmethod
+    def pre_flight(cls, workspace, args):
+        chdir(workspace.devel_root)
+        do_cmd("git pull")
+        workspace.reload()
+    
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         try:
