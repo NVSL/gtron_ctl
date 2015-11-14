@@ -22,6 +22,13 @@ function error () {
     exit
 }
 
+function verify_success() {
+    if ! [ ${PIPESTATUS[0]} -eq 0 ]; then
+	error "Command failed"
+	exit 1
+    fi
+}
+
 function do_cmd() {
     if [ "$dry_run." = "yes." ]; then
 	echo

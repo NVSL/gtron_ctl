@@ -43,11 +43,14 @@ EOF
 function install_global_python() {
     banner "Installing global python packages..."
     $SUDO pip install -r ../config/global_python.txt | save_log install_global_python
+    verify_success
 }
 
 function install_global_javascript() {
     banner "Installing global javascript resources..."
     $SUDO npm install -g $(cat ../config/global_node.txt) 2>&1 | save_log install_global_javascript
+    verify_success
+    
 }
 
 function ensure_ssh_key() {
