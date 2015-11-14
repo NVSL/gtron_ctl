@@ -525,6 +525,8 @@ class cmd(DirectoryCommand):
             log.exception(e)
             return (False, "Failed")
 
+            
+
 class update(DirectoryCommand):
     """
 
@@ -937,7 +939,7 @@ class cleanup(Command):
     help="Cleanup after gtron"
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("find . -name '*.gtron-log.txt'| xargs rm -rf")
+        do_cmd("find . -name '*.gtron-log'| xargs rm -rf")
 
 class full_docs(Command):
     """Build and open the manual in a web browser"""
@@ -1060,6 +1062,7 @@ def main(argv):
     panda.add_command(config_set)
     panda.add_command(config_unset)
     panda.add_command(config_dump)
+
 
 
     args = panda.parse_args(argv[1:])

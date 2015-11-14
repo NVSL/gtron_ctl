@@ -14,6 +14,7 @@
 # for installation in general. In particular, if you source the .sh file
 # referenced below, you can install each piece mannually and see how it goes.
 
+
 pushd ${0%/*}
 
 source ../lib/install_util.sh
@@ -29,6 +30,7 @@ fi
 
 check_for_package_manager
 install_system_packages 
+verify_success
 install_global_python 
 install_global_javascript 
 

@@ -41,7 +41,15 @@ else
     sudo apt-get install -y curl git
 fi
 
-git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
+if ! [ -d gtron_devel ]; then
+    git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
+else
+    (cd gtron_devel;
+     git pull;
+     git checkout ${branch};
+     git pull
+    )
+fi
 
 pushd gtron_devel
 
@@ -51,9 +59,11 @@ source repo/lib/install_common.sh
 source gtron_env.sh
 banner "Setting up global system configuration."
 gtron --force update_system --install-apps
+verify_success
 
 banner "Setting up development environment (this may take a while)."
 gtron --force setup_devel --github-user $github_user
+verify_success
 activate_gadgetron
 
 banner "Checking out everything"
