@@ -5,6 +5,10 @@
             "url": "$NVSL_GIT/BOBBuilder"
         },
         {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/BOMGenerator"
+        },
+        {
             "directory": "Gadgets/Libraries",
             "url": "$NVSL_GIT/GadgetronSketchBook"
         },
