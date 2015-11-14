@@ -12,7 +12,7 @@ function install_system_packages() {
     #install system-wide packages
     banner "Installing system-wide packages (this may take a while)."
 
-    $SUDO apt-get update
+    $SUDO apt-get update | save_log update_apt_get
     $SUDO apt-get -y install python-pip libspatialindex-dev python-pygame libcgal-dev swig inkscape curl nodejs npm subversion emacs git cython python-lxml npm swig libpython-dev libxml2 libxml2-dev libxslt1-dev arduino vim | save_log install_system_packages
     #sudo apt-get remove arduino #  It's the wrong version, but it gives us all the support libs (E.g., java)
 }
