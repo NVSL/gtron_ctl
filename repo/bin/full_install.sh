@@ -35,7 +35,14 @@ push_ssh_key_to_github
 
 start_ssh_agent
 
-git clone -b ${branch} git@github.com:NVSL/gtron_devel.git 
+if [ "$(uname)." = "Darwin." ]; then
+    true;
+else
+    sudo apt-get install -y curl git
+fi
+
+git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
+
 pushd gtron_devel
 
 source repo/lib/install_util.sh
