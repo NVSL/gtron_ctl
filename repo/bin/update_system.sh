@@ -30,7 +30,6 @@ fi
 
 check_for_package_manager
 install_system_packages 
-verify_success
 install_global_python 
 install_global_javascript 
 
