@@ -13,7 +13,7 @@ function check_for_package_manager() {
 
     if ! [ -e /usr/local/bin/brew ]; then
 	request "You need to install brew.  \nThis will clash if you have another package manager installed, so I am not going to do it automatically.\nYou can do it with 'ruby -e \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)\"'"
-	exit ;
+	exit 1;
     fi
 }
 
