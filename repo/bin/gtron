@@ -261,30 +261,42 @@ class ParseAndDispatch:
         return self.parser.parse_args(argv)
 
 
-
-def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False):
+class CmdFailure(Exception):
+    def __init__(self, returncode, stdout, stderr):
+        Exception.__init__(self);
+        self.stdout = stdout
+        self.stderr = stderr
+        self.returncode = returncode
+        
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False, raise_on_err=True, cwd=None):
     if dry_run is True:
         output = ""
         print s
+        return (None,None,None)
     else:
         log.info("Executing: " + s);
-        try:
-            output = None
-            if live_updates:
-                subprocess.check_call(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin)
-                output=""
-            else:
-                output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
-                log.info("Output: \n" + str(output));
-                
-                if stdout != "RETURN_VALUE":
-                    stdout.write(output)
-                
-        except subprocess.CalledProcessError as e:
-            log.info("Command failed  ({}): {}".format(s,e))
-            e.command_output = output
-            raise e
-    return output
+        if live_updates:
+            p = subprocess.Popen(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin, cwd=cwd);
+            (out, err) = p.communicate()
+        else:
+            p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=stdin, cwd=cwd);
+            (out, err) = p.communicate()
+            log.info("Stdout: \n" + str(out));
+            log.info("stderr: \n" + str(err));
+            
+        if stdout is not None:
+            if out is not None:
+                stdout.write(out)
+        if stderr is not None:
+            if err is not None:
+                stderr.write(err)
+
+        if p.returncode is not 0:
+            log.info("Command failed  ({})".format(s))
+            if raise_on_err:
+                raise CmdFailure(p.returncode, out, err)
+
+        return (p.returncode, out, err)
 
 
 class new_design(Command):
@@ -320,13 +332,11 @@ class new_design(Command):
             sys.exit(1)
 
         if args.in_nvsl:
-            output = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
-                            format(workspace.get_variable("github_user"), args.name),
-                            stdout="RETURN_VALUE")
+            (r, output, err) = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
+                                      format(workspace.get_variable("github_user"), args.name))
         else:
-            output = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
-                            format(workspace.get_variable("github_user"), args.name),
-                            stdout="RETURN_VALUE")
+            (r, output, err) = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
+                                      format(workspace.get_variable("github_user"), args.name))
 
         if not dry_run:
             response=json.loads(output)
@@ -487,7 +497,7 @@ class DirectoryCommand(Command):
                     else:
                         sys.stderr.write(postamble_format.format("", in_red(msg)))
                             
-            except subprocess.CalledProcessError as e:
+            except CmdFailure as e:
 
                 log.info("here")
                 if cls.needs_log:
@@ -535,7 +545,7 @@ class cmd(DirectoryCommand):
         chdir(workspace.absolute_path(repo.full_directory))
         print "============ {} ============".format(repo.full_directory)
         try:
-            do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
+            do_cmd(" ".join(args.cmd))
             return (True, "Success")
         except Exception as e:
             log.exception(e)
@@ -571,13 +581,22 @@ class update(DirectoryCommand):
 
     @classmethod
     def pre_flight(cls, workspace, args):
-        chdir(workspace.devel_root)
-        do_cmd("git pull")
-        workspace.reload()
+        (r, out, err) = do_cmd("git pull", cwd=workspace.devel_root, stdout=None, stderr=None, raise_on_err=False)
+        if dry_run:
+            return
+        if r is not 0:
+            if err.find("There is no tracking information for the current branch") is not -1:
+                log.warn("Couldn't pull updates for gtron because branch doesn't exist in upstream")
+            else:
+                raise CmdFailure(r, out, err)
+        else:
+            workspace.reload()
+            
     
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         try:
+            success_message="SUCCESS"
             if dry_run:
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
@@ -611,7 +630,10 @@ class update(DirectoryCommand):
                         do_cmd("git checkout {}".format(branch),
                                stdout=log_file, 
                                stderr=log_file)
-                    do_cmd("git pull", stdout=log_file, stderr=log_file)
+                    (r, out, err) = do_cmd("git pull", raise_on_err=False, stdout=log_file, stderr=log_file)
+                    if not dry_run:
+                        if err.find("There is no tracking information for the current branch") is not -1:
+                            success_message = "MISSING UPSTREAM BRANCH"
                         
 
             else:
@@ -629,7 +651,7 @@ class update(DirectoryCommand):
                            stderr=log_file)
 
             if not dry_run:
-                return (True, "PASSED")
+                return (True, success_message)
             
 
         except Exception as e:
