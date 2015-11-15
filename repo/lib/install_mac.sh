@@ -20,16 +20,18 @@ function check_for_package_manager() {
 function install_system_packages() {
     banner Installing Brew packages
     
-    brew tap homebrew/x11
-    brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget || error Brew failed
+    (brew tap homebrew/x11 &&
+     brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget) | save_log install_brew_packages
+    verify_success
 }
 
 # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
 function install_eagle() {
     banner "Installing Eagle..."
-    wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip || error Downloading eagle failed
-    unzip eagle-mac64-7.4.0.zip || error Uncompressing eagle failed
-    open eagle-mac64-7.4.0.pkg
+    (wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip &&
+    unzip eagle-mac64-7.4.0.zip &&
+    open eagle-mac64-7.4.0.pkg) | save_log install_eagle
+    verify_success
 
     request "Please complete the Eagle installer, and then press return"
     read junk
@@ -38,16 +40,16 @@ function install_eagle() {
 function install_arduino() {
     #Install latest version of arduino:
     banner "Installing latest version of Arduino..."
-    wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip || error Downloading Arduino failed.
-    unzip arduino-1.6.4-macosx.zip || error Unzipping Arduino failed.
-    mv Arduino.app /Applications/ || error Installing ARduino failed.
+    (wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip &&
+    unzip arduino-1.6.4-macosx.zip &&
+    mv Arduino.app /Applications/ )| save_log install_arduino
 }
 
 function install_GAE() {
     banner "Installing Google app engine..."
 
-    wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg || error Downloading GAE failed
-    open GoogleAppEngineLauncher-1.9.27.dmg || error Mounting GAE Disk image failed.
+    (wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
+    open GoogleAppEngineLauncher-1.9.27.dmg )| save_log install_gae
     
     request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
     read junk
