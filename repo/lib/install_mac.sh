@@ -38,6 +38,7 @@ function install_eagle() {
 	sleep 5;
     done
 
+    mkdir -p ~/eagle
 }
 
 function install_arduino() {
