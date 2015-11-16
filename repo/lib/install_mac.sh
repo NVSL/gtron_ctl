@@ -21,7 +21,7 @@ function install_system_packages() {
     banner Installing Brew packages
     
     (brew tap homebrew/x11 &&
-     brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget) | save_log install_brew_packages
+     brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget) 2>&1 | save_log install_brew_packages
     verify_success
 }
 
@@ -30,7 +30,7 @@ function install_eagle() {
     banner "Installing Eagle..."
     (wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip &&
     unzip eagle-mac64-7.4.0.zip &&
-    open eagle-mac64-7.4.0.pkg) | save_log install_eagle
+    open eagle-mac64-7.4.0.pkg) 2>&1 | save_log install_eagle
     verify_success
 
     request "Please complete the Eagle installer, and then press return"
@@ -42,14 +42,14 @@ function install_arduino() {
     banner "Installing latest version of Arduino..."
     (wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip &&
     unzip arduino-1.6.4-macosx.zip &&
-    mv Arduino.app /Applications/ )| save_log install_arduino
+    mv Arduino.app /Applications/ ) 2>&1 | save_log install_arduino
 }
 
 function install_GAE() {
     banner "Installing Google app engine..."
 
     (wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
-    open GoogleAppEngineLauncher-1.9.27.dmg )| save_log install_gae
+    open GoogleAppEngineLauncher-1.9.27.dmg ) 2>&1 | save_log install_gae
     
     request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
     read junk

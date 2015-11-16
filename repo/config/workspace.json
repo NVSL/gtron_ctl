@@ -2,6 +2,10 @@
     "repos": [
         {
             "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Swoop"
+        },
+        {
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/BOBBuilder"
         },
         {
@@ -23,10 +27,6 @@
         {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/CaseMaker"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Swoop"
         },
         {
             "directory": "Gadgets/Tools",
