@@ -59,7 +59,7 @@ function install_GAE() {
 	  request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
 	  sleep 5
     done
-
+    sleep 10; # wait for copy to complete.
     open /Applications/GoogleAppEngineLauncher.app
     while ! [ -e /usr/local/bin/dev_appserver.py ]; do
 	request "Complete GAE installation. Click 'yes' to symlinks."
