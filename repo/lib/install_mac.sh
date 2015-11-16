@@ -54,12 +54,17 @@ function install_GAE() {
     (wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
     open GoogleAppEngineLauncher-1.9.27.dmg ) 2>&1 | save_log install_gae
     
-    request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
-    read junk
 
-    request "Click 'yes' when Google App Engine asks about creating symlinks."
-    
+    while ! [ -e /Applications/GoogleAppEngineLauncher.app ]; do
+	  request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
+	  sleep 5
+    done
+
     open /Applications/GoogleAppEngineLauncher.app
+    while ! [ -e /usr/local/bin/dev_appserver.py ]; do
+	request "Complete GAE installation. Click 'yes' to symlinks."
+	sleep 5
+    done
 }
 
 
