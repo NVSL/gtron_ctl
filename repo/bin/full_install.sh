@@ -63,12 +63,20 @@ banner "Setting up global system configuration."
 gtron --force update_system --install-apps
 verify_success
 
+if [ "$SYSTEM_SETUP_ONLY." = "yes." ]; then
+    exit 0
+fi
 source gtron_env.sh
 
 banner "Setting up development environment (this may take a while)."
 gtron --force setup_devel --github-user $github_user
 verify_success
 activate_gadgetron
+
+if [ "$DEVEL_SETUP_ONLY." = "yes." ]; then
+    exit 0
+fi
+
 
 banner "Checking out everything"
 gtron update
