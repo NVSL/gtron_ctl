@@ -33,8 +33,11 @@ function install_eagle() {
     open eagle-mac64-7.4.0.pkg) 2>&1 | save_log install_eagle
     verify_success
 
-    request "Please complete the Eagle installer, and then press return"
-    read junk
+    while ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; do
+	request "Please complete the Eagle installer.";
+	sleep 5;
+    done
+
 }
 
 function install_arduino() {
