@@ -33,7 +33,7 @@ function install_eagle() {
 	request "Eagle is is going to ask you to create a directory.  Say yes, then exit."
 	/opt/eagle-7.4.0/bin/eagle
     fi
-	
+    mkdir -p ~/eagle
 }
 
 function install_arduino() {

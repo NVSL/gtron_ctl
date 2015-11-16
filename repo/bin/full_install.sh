@@ -24,8 +24,10 @@ popd
 user=$nvsl_user
 user=$nvsl
 
-echo "Enter your password on this machine:"
-sudo true
+if ! [ "$(uname)." = "Darwin." ]; then
+    echo "Enter your password on this machine:"
+    sudo true
+fi
 
 ensure_ssh_key
 
@@ -60,6 +62,8 @@ source gtron_env.sh
 banner "Setting up global system configuration."
 gtron --force update_system --install-apps
 verify_success
+
+source gtron_env.sh
 
 banner "Setting up development environment (this may take a while)."
 gtron --force setup_devel --github-user $github_user
