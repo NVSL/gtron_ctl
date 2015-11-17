@@ -27,18 +27,20 @@ function install_system_packages() {
 
 # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
 function install_eagle() {
-    banner "Installing Eagle..."
-    (wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip &&
-    unzip eagle-mac64-7.4.0.zip &&
-    open eagle-mac64-7.4.0.pkg) 2>&1 | save_log install_eagle
-    verify_success
+    if ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; then
+	banner "Installing Eagle..."
+	(wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip &&
+		unzip eagle-mac64-7.4.0.zip &&
+		open eagle-mac64-7.4.0.pkg) 2>&1 | save_log install_eagle
+	verify_success
+	
+	while ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; do
+	    request "Please complete the Eagle installer.";
+	    sleep 5;
+	done
 
-    while ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; do
-	request "Please complete the Eagle installer.";
-	sleep 5;
-    done
-
-    mkdir -p ~/eagle
+	mkdir -p ~/eagle
+    fi
 }
 
 function install_arduino() {
@@ -50,22 +52,24 @@ function install_arduino() {
 }
 
 function install_GAE() {
-    banner "Installing Google app engine..."
-
-    (wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
-	    cp -r /Volumes/GoogleAppEngineLauncher*/GoogleAppEngineLauncher.app /Applications/) 2>&1| save_log install_gae
-	    #open GoogleAppEngineLauncher-1.9.27.dmg ) 2>&1 | save_log install_gae
     
-    # while ! [ -e /Applications/GoogleAppEngineLauncher.app ]; do
-    # 	  request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
-    # 	  sleep 5
-    # done
-    # sleep 10; # wait for copy to complete.
-    open /Applications/GoogleAppEngineLauncher.app
-    while ! [ -e /usr/local/bin/dev_appserver.py ]; do
-	request "Complete GAE installation. Click 'yes' to symlinks."
-	sleep 5
-    done
+    if ! [ -e /usr/local/bin/dev_appserver.py ]; then
+	banner "Installing Google app engine..."
+	(wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
+		open GoogleAppEngineLauncher-1.9.27.dmg && sleep 15 &&
+		cp -r /Volumes/GoogleAppEngineLauncher*/GoogleAppEngineLauncher.app /Applications/) 2>&1| save_log install_gae
+    
+	# while ! [ -e /Applications/GoogleAppEngineLauncher.app ]; do
+	# 	  request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
+	# 	  sleep 5
+	# done
+	# sleep 10; # wait for copy to complete.
+	open /Applications/GoogleAppEngineLauncher.app
+	while ! [ -e /usr/local/bin/dev_appserver.py ]; do
+	    request "Complete GAE installation. Click 'yes' to symlinks."
+	    sleep 5
+	done
+    fi
 }
 
 
