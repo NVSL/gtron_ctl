@@ -39,11 +39,7 @@ def chdir(d):
     if dry_run:
         print "cd {}".format(d)
     else:
-        try:
-            os.chdir(d)
-        except Exception as e:
-            log.error("Can't change to {}".format(d))
-            sys.exit(1)
+        os.chdir(d)
     
 class Repo:
     def __init__(self, json, count=0, local=False):
@@ -68,7 +64,7 @@ class Repo:
         if self.stored_order is None:
             self.sort_by = count;
         else:
-            self.sort_by = int(self.stored_order)
+            self.sort_by = self.stored_order
             
     def to_json(self):
         r =  {"url": self.url,
@@ -93,12 +89,6 @@ class Repo:
 class WorkspaceConfig:
 
     def __init__(self,devel_root, global_config_file, local_config_file):
-        self.load(devel_root, global_config_file, local_config_file)
-        
-    def reload(self):
-        self.load(self.devel_root, self.global_config_file, self.local_config_file)
-
-    def load(self,devel_root, global_config_file, local_config_file):
         global_json_data = json.load(open(global_config_file))
         if os.path.exists(local_config_file):
             local_json_data = json.load(open(local_config_file))
@@ -261,42 +251,24 @@ class ParseAndDispatch:
         return self.parser.parse_args(argv)
 
 
-class CmdFailure(Exception):
-    def __init__(self, returncode, stdout, stderr):
-        Exception.__init__(self);
-        self.stdout = stdout
-        self.stderr = stderr
-        self.returncode = returncode
-        
-def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False, raise_on_err=True, cwd=None):
+
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin):
     if dry_run is True:
         output = ""
         print s
-        return (None,None,None)
     else:
         log.info("Executing: " + s);
-        if live_updates:
-            p = subprocess.Popen(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin, cwd=cwd);
-            (out, err) = p.communicate()
-        else:
-            p = subprocess.Popen(s, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=stdin, cwd=cwd);
-            (out, err) = p.communicate()
-            log.info("Stdout: \n" + str(out));
-            log.info("stderr: \n" + str(err));
-            
-        if stdout is not None:
-            if out is not None:
-                stdout.write(out)
-        if stderr is not None:
-            if err is not None:
-                stderr.write(err)
-
-        if p.returncode is not 0:
-            log.info("Command failed  ({})".format(s))
-            if raise_on_err:
-                raise CmdFailure(p.returncode, out, err)
-
-        return (p.returncode, out, err)
+        try:
+            output = subprocess.check_output(s, shell=True, stderr=stderr, stdin=stdin)
+            log.info("Output: \n" + output);
+            if stdout != "RETURN_VALUE":
+                stdout.write(output)
+                
+        except subprocess.CalledProcessError as e:
+            log.info("Command failed  ({}): {}".format(s,e))
+            e.command_output = output
+            raise e
+    return output
 
 
 class new_design(Command):
@@ -332,11 +304,13 @@ class new_design(Command):
             sys.exit(1)
 
         if args.in_nvsl:
-            (r, output, err) = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
-                                      format(workspace.get_variable("github_user"), args.name))
+            output = do_cmd("""curl -s -u {} https://api.github.com/orgs/NVSL/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.get_variable("github_user"), args.name),
+                            stdout="RETURN_VALUE")
         else:
-            (r, output, err) = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
-                                      format(workspace.get_variable("github_user"), args.name))
+            output = do_cmd("""curl -s -u {} https://api.github.com/user/repos -d '{{"name":"{}"}}'""".
+                            format(workspace.get_variable("github_user"), args.name),
+                            stdout="RETURN_VALUE")
 
         if not dry_run:
             response=json.loads(output)
@@ -390,9 +364,9 @@ class update_system(Command):
     @classmethod
     def go(cls, workspace, args):
         if args.install_apps:
-            do_cmd("update_system.sh --install", live_updates=True)
+            do_cmd("update_system.sh --install")
         else:
-            do_cmd("update_system.sh", live_updates=True)
+            do_cmd("update_system.sh")
                         
 class setup_devel(Command):
     """
@@ -422,7 +396,7 @@ class setup_devel(Command):
 
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user), live_updates=True)
+        do_cmd("setup_gadgetron.sh {} {}".format(args.nvsl_user, args.github_user))
 
 class DirectoryCommand(Command):
     log_file_prefix="command"
@@ -435,17 +409,7 @@ class DirectoryCommand(Command):
                             nargs="*",
                             help="Directories to operate on (default: all of them)")
     @classmethod
-    def pre_flight(cls, workspace, args):
-        pass
-        
-    @classmethod
-    def post_flight(cls, workspace, args):
-        pass
-        
-    @classmethod
     def go(cls, workspace, args):
-        oldPWD = os.getcwd()
-        cls.pre_flight(workspace, args)
         workspace.expand_variables()
         if len(args.directories) == 0:
             repo_list = workspace.repos()
@@ -460,6 +424,7 @@ class DirectoryCommand(Command):
                 else:
                     repo_list.append(r)
 
+        oldPWD = os.getcwd()
         for repo in repo_list:
             if not dry_run and cls.pretty_print:
                 preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
@@ -469,7 +434,7 @@ class DirectoryCommand(Command):
 
                  
             tmp_log_file_name=os.path.join(repo.container_directory,
-                                           "{}-{}.gtron-log.txt".format(repo.repo_directory, cls.log_file_prefix))
+                                           "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
 
             try: 
                 os.makedirs(workspace.absolute_path(repo.container_directory))
@@ -479,7 +444,7 @@ class DirectoryCommand(Command):
                     raise
                 
             final_log_file_name=os.path.join(repo.full_directory,
-                                             "{}.gtron-log.txt".format(cls.log_file_prefix))
+                                             "{}.gtron.log".format(cls.log_file_prefix))
                 
             if cls.needs_log and not dry_run:
                 log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
@@ -497,17 +462,16 @@ class DirectoryCommand(Command):
                     else:
                         sys.stderr.write(postamble_format.format("", in_red(msg)))
                             
-            except CmdFailure as e:
+            except subprocess.CalledProcessError as e:
 
                 log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
-                if not dry_run and cls.pretty_print:
-                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
                 if log_file is not None:
                     log_file.close()
-                    log.warning("Last 10 lines of command output:")
-                    log.warning("".join(open(workspace.absolute_path(tmp_log_file_name), "r").readlines()[-10:]))
+                    log.warning(open(workspace.absolute_path(tmp_log_file_name), "r").read())
+                if not dry_run and cls.pretty_print:
+                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
                     
             finally:
                 if cls.needs_log:
@@ -518,7 +482,6 @@ class DirectoryCommand(Command):
                     except Exception as e:
                         log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
         os.chdir(oldPWD)
-        cls.post_flight(workspace, args)
 
 class cmd(DirectoryCommand):
     """
@@ -545,13 +508,11 @@ class cmd(DirectoryCommand):
         chdir(workspace.absolute_path(repo.full_directory))
         print "============ {} ============".format(repo.full_directory)
         try:
-            do_cmd(" ".join(args.cmd))
+            do_cmd(" ".join(args.cmd), stdout=sys.stdout, stderr=sys.stderr)
             return (True, "Success")
         except Exception as e:
             log.exception(e)
             return (False, "Failed")
-
-            
 
 class update(DirectoryCommand):
     """
@@ -580,23 +541,8 @@ class update(DirectoryCommand):
                             help="Restore repos to the branch specified in workspace configs.")
 
     @classmethod
-    def pre_flight(cls, workspace, args):
-        (r, out, err) = do_cmd("git pull", cwd=workspace.devel_root, stdout=None, stderr=None, raise_on_err=False)
-        if dry_run:
-            return
-        if r is not 0:
-            if err.find("There is no tracking information for the current branch") is not -1:
-                log.warn("Couldn't pull updates for gtron because branch doesn't exist in upstream")
-            else:
-                raise CmdFailure(r, out, err)
-        else:
-            workspace.reload()
-            
-    
-    @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         try:
-            success_message="SUCCESS"
             if dry_run:
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
@@ -630,10 +576,7 @@ class update(DirectoryCommand):
                         do_cmd("git checkout {}".format(branch),
                                stdout=log_file, 
                                stderr=log_file)
-                    (r, out, err) = do_cmd("git pull", raise_on_err=False, stdout=log_file, stderr=log_file)
-                    if not dry_run:
-                        if err.find("There is no tracking information for the current branch") is not -1:
-                            success_message = "MISSING UPSTREAM BRANCH"
+                    do_cmd("git pull", stdout=log_file, stderr=log_file)
                         
 
             else:
@@ -651,7 +594,7 @@ class update(DirectoryCommand):
                            stderr=log_file)
 
             if not dry_run:
-                return (True, success_message)
+                return (True, "PASSED")
             
 
         except Exception as e:
@@ -673,12 +616,6 @@ class ubt(DirectoryCommand):
 """
     description="Update, build, and test all the repos."
     help="Update, build, and test all the repos."
-
-    @classmethod
-    def add_args(cls, parser):
-        update.add_args(parser)
-        #build.add_args(parser)
-        #test.add_args(parser)
     
     @classmethod
     def go(cls, workspace, args):
@@ -983,7 +920,7 @@ class cleanup(Command):
     help="Cleanup after gtron"
     @classmethod
     def go(cls, workspace, args):
-        do_cmd("find . -name '*.gtron-log'| xargs rm -rf")
+        do_cmd("find . -name '*.gtron.log'| xargs rm -rf")
 
 class full_docs(Command):
     """Build and open the manual in a web browser"""
@@ -1108,7 +1045,6 @@ def main(argv):
     panda.add_command(config_dump)
 
 
-
     args = panda.parse_args(argv[1:])
 
     if args.verbose:
@@ -1122,8 +1058,10 @@ def main(argv):
     dry_run = args.dry_run;
 
     workspace = WorkspaceConfig(args.devel_root, args.global_config_file, args.local_config_file)
-    if not args.force:
-        if not sanity(workspace):
+    if not sanity(workspace):
+        if args.force:
+            log.warning("Continuing despite misconfiguration")
+        else:
             log.error("Quiting, due to misconfiguration")
             sys.exit(1);
     
