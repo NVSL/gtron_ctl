@@ -115,4 +115,4 @@ else
     echo "Couldn't set INKSCAPE_EXE.  Please edit setup_gadgets so that others who use your OS won't have this problem in the future"
 fi
 
-
+export ARDUPI_HOME=$GADGETRON_ROOT/Tools/rpiutil
