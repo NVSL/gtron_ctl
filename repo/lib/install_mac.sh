@@ -10,50 +10,66 @@
 # for installation in general.
 
 function check_for_package_manager() {
+
     if ! [ -e /usr/local/bin/brew ]; then
 	request "You need to install brew.  \nThis will clash if you have another package manager installed, so I am not going to do it automatically.\nYou can do it with 'ruby -e \"\$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)\"'"
-	exit ;
+	exit 1;
     fi
 }
 
 function install_system_packages() {
     banner Installing Brew packages
     
-    brew tap homebrew/x11
-    brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget || error Brew failed
+    (brew tap homebrew/x11 &&
+     brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget) 2>&1 | save_log install_brew_packages
+    verify_success
 }
 
 # install 32-bit eagle (didn’t need any of the apt-get craziness on wiki)
 function install_eagle() {
-    banner "Installing Eagle..."
-    wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip || error Downloading eagle failed
-    unzip eagle-mac64-7.4.0.zip || error Uncompressing eagle failed
-    open eagle-mac64-7.4.0.pkg
+    if ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; then
+	banner "Installing Eagle..."
+	(wget -O eagle-mac64-7.4.0.zip http://web.cadsoft.de/ftp/eagle/program/7.4/eagle-mac64-7.4.0.zip &&
+		unzip eagle-mac64-7.4.0.zip &&
+		open eagle-mac64-7.4.0.pkg) 2>&1 | save_log install_eagle
+	verify_success
+	
+	while ! [ -e /Applications/EAGLE-7.4.0/EAGLE.app/Contents/MacOS/EAGLE ]; do
+	    request "Please complete the Eagle installer.";
+	    sleep 5;
+	done
 
-    request "Please complete the Eagle installer, and then press return"
-    read junk
+	mkdir -p ~/eagle
+    fi
 }
 
 function install_arduino() {
     #Install latest version of arduino:
     banner "Installing latest version of Arduino..."
-    wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip || error Downloading Arduino failed.
-    unzip arduino-1.6.4-macosx.zip || error Unzipping Arduino failed.
-    mv Arduino.app /Applications/ || error Installing ARduino failed.
+    (wget -O arduino-1.6.4-macosx.zip http://arduino.cc/download.php?f=/arduino-1.6.4-macosx.zip &&
+    unzip arduino-1.6.4-macosx.zip &&
+    mv Arduino.app /Applications/ ) 2>&1 | save_log install_arduino
 }
 
 function install_GAE() {
-    banner "Installing Google app engine..."
-
-    wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg || error Downloading GAE failed
-    open GoogleAppEngineLauncher-1.9.27.dmg || error Mounting GAE Disk image failed.
     
-    request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
-    read junk
-
-    request "Click 'yes' when Google App Engine asks about creating symlinks."
+    if ! [ -e /usr/local/bin/dev_appserver.py ]; then
+	banner "Installing Google app engine..."
+	(wget -O GoogleAppEngineLauncher-1.9.27.dmg https://storage.googleapis.com/appengine-sdks/featured/GoogleAppEngineLauncher-1.9.27.dmg &&
+		open GoogleAppEngineLauncher-1.9.27.dmg && sleep 15 &&
+		cp -r /Volumes/GoogleAppEngineLauncher*/GoogleAppEngineLauncher.app /Applications/) 2>&1| save_log install_gae
     
-    open /Applications/GoogleAppEngineLauncher.app
+	# while ! [ -e /Applications/GoogleAppEngineLauncher.app ]; do
+	# 	  request "Copy the Google App Engine Launcher app into the your Applications folder.  Press return when done"
+	# 	  sleep 5
+	# done
+	# sleep 10; # wait for copy to complete.
+	open /Applications/GoogleAppEngineLauncher.app
+	while ! [ -e /usr/local/bin/dev_appserver.py ]; do
+	    request "Complete GAE installation. Click 'yes' to symlinks."
+	    sleep 5
+	done
+    fi
 }
 
 

@@ -2,7 +2,15 @@
     "repos": [
         {
             "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Swoop"
+        },
+        {
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/BOBBuilder"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/BOMGenerator"
         },
         {
             "directory": "Gadgets/Libraries",
@@ -19,15 +27,6 @@
         {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/CaseMaker"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/CbC",
-	    "order": "700"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Swoop"
         },
         {
             "directory": "Gadgets/Tools",
@@ -106,9 +105,14 @@
             "url": "$NVSL_GIT/testGadget"
         },
         {
+            "directory": "Gadgets/Tools",
+            "order": "700",
+            "url": "$NVSL_GIT/CbC"
+        },
+        {
             "directory": "Gadgets/Designs",
             "no_build": "TRUE",
-            "order": 1000,
+            "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
         },
         {
@@ -120,7 +124,7 @@
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
         "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
-        "design_template": "$NVSL_GIT/gtron-design-template",
-	"default_branch": "master"
+        "default_branch": "master",
+        "design_template": "$NVSL_GIT/gtron-design-template"
     }
 }

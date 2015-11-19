@@ -3,7 +3,11 @@
 mkdir .tmp
 pushd .tmp
 
-branch=master
+if [ "$1." = "." ]; then
+    branch=master
+else
+    branch=$1
+fi
 
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
 curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
@@ -14,35 +18,65 @@ source install_common.sh
 popd
 #rm -rf .tmp
 
-echo  "Enter your NVSL lab username:"
-read nvsl_user
-echo "Enter your github username:"
-read github_user
+#echo  "Enter your NVSL lab username:"
+#read nvsl_user
 
 user=$nvsl_user
-
 user=$nvsl
 
-if ensure_ssh_key; then
-    push_ssh_key_to_bb_cluster
+if ! [ "$(uname)." = "Darwin." ]; then
+    echo "Enter your password on this machine:"
+    sudo true
 fi
+
+ensure_ssh_key
+
+echo "Enter your github username:"
+read github_user
 push_ssh_key_to_github
 
 start_ssh_agent
 
-git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
+if [ "$(uname)." = "Darwin." ]; then
+    true;
+else
+    sudo apt-get install -y curl git
+fi
+
+if ! [ -d gtron_devel ]; then
+    git clone -b ${branch} git@github.com:NVSL/gtron_devel.git
+else
+    (cd gtron_devel;
+     git pull;
+     git checkout ${branch};
+     git pull
+    )
+fi
+
 pushd gtron_devel
 
 source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
 source gtron_env.sh
-banner "Setting up global system configuration.  Ignore the following warnings about misconfiguration..."
+banner "Setting up global system configuration."
 gtron --force update_system --install-apps
+verify_success
 
-banner "Setting up development environment"
-gtron --force setup_devel --nvsl-user $nvsl_user --github-user $github_user
+if [ "$SYSTEM_SETUP_ONLY." = "yes." ]; then
+    exit 0
+fi
+source gtron_env.sh
+
+banner "Setting up development environment (this may take a while)."
+gtron --force setup_devel --github-user $github_user
+verify_success
 activate_gadgetron
+
+if [ "$DEVEL_SETUP_ONLY." = "yes." ]; then
+    exit 0
+fi
+
 
 banner "Checking out everything"
 gtron update

@@ -1,3 +1,13 @@
+
+function load_platform_install_utils() {
+    if [ "$(uname)." = "Darwin." ]; then
+	source ../lib/install_mac.sh
+    else
+	source ../lib/install_ubuntu.sh
+	SUDO="sudo -H"
+    fi
+}
+
 function init_github() {
     request "Making github work easily (say 'yes')"
     (git clone git@github.com:NVSL/gadgetron-vm-util.git
@@ -33,17 +43,20 @@ EOF
 function install_global_python() {
     banner "Installing global python packages..."
     $SUDO pip install -r ../config/global_python.txt | save_log install_global_python
+    verify_success
 }
 
 function install_global_javascript() {
     banner "Installing global javascript resources..."
-    $SUDO npm install -g $(cat ../config/global_node.txt) | save_log install_global_javascript
+    $SUDO npm install -g $(cat ../config/global_node.txt) 2>&1 | save_log install_global_javascript
+    verify_success
+    
 }
 
 function ensure_ssh_key() {
     if ! [ -e ~/.ssh/id_rsa.pub ]; then 
-	request "Generating public key.  Please accept all the defaults"
-	ssh-keygen
+	request "Generating public key." #  Please accept all the defaults"
+	(unset DISPLAY; echo -ne "\n\n\n" | ssh-keygen -N "" )
 	true
     else
 	false
@@ -58,7 +71,7 @@ function push_ssh_key_to_bb_cluster() {
 }
 
 function push_ssh_key_to_github() {
-    request "Please enter github password to install ssh key:"
+    request "Enter your Github password:"
     sshkey=`cat ~/.ssh/id_rsa.pub`
     #curl -X POST -H "Content-type: application/json" -d "{\"title\": \"GadgetronDevelopment\",\"key\": \"$sshkey\"}" "https://api.github.com/user/keys
     curl -H "Content-type: application/json" -X POST -s -u $github_user -d "{\"title\":\"GadgtronDevelopment\",\"key\":\"$sshkey\"}" https://api.github.com/user/keys 
