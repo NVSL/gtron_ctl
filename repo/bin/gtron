@@ -185,6 +185,7 @@ class WorkspaceConfig:
                   sort_keys=True,
                   indent=4,
                   separators=(',', ': '))
+        file.write("\n")
 
     def dump(self):
         self.write_config_to_file(sys.stdout, local=False)

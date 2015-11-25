@@ -22,11 +22,6 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/CbC",
-	    "order": "700"
-        },
-        {
-            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Swoop"
         },
         {
@@ -115,12 +110,17 @@
             "directory": "Gadgets/Tools",
             "order": "1000",
             "url": "$NVSL_GIT/jet"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "order": "700",
+            "url": "$NVSL_GIT/CbC"
         }
     ],
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
         "NVSL_SVN": "svn+ssh://${nvsl_user}@bbfs-01.calit2.net/grw/Gordon/svn/${branch}/Gadgets",
-        "design_template": "$NVSL_GIT/gtron-design-template",
-	"default_branch": "master"
+        "default_branch": "master",
+        "design_template": "$NVSL_GIT/gtron-design-template"
     }
 }
