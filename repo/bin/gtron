@@ -556,7 +556,7 @@ class update(DirectoryCommand):
                         raise
 
 
-            if args.branch is not None:
+            if hasattr(args, "branch"):
                 branch = args.branch
             elif repo.branch is not None:
                 branch = repo.branch
@@ -573,7 +573,7 @@ class update(DirectoryCommand):
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
                 else:
-                    if args.restore_default_branch or args.branch is not None:
+                    if args.restore_default_branch or hasattr(args, 'branch'):
                         do_cmd("git checkout {}".format(branch),
                                stdout=log_file, 
                                stderr=log_file)
@@ -650,7 +650,9 @@ class make(DirectoryCommand):
         make_cmd= "make {}".format(" ".join(map(pipes.quote, args.make_args))).strip()
         if (os.path.exists(workspace.absolute_path(os.path.join(repo.full_directory, "makefile"))) or
             os.path.exists(workspace.absolute_path(os.path.join(repo.full_directory, "Makefile")))):
-            do_cmd(make_cmd, stdout=log_file, stderr=log_file)
+            do_cmd(make_cmd,
+                   stdout=log_file,
+                   stderr=log_file)
             return (True, "SUCCESS")
         else:
             return (True, "No Makefile")
