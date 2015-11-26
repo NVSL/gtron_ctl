@@ -610,7 +610,7 @@ class update(DirectoryCommand):
                         raise
 
 
-            if hasattr(args, "branch"):
+            if args.branch is not None:
                 branch = args.branch
             elif repo.branch is not None:
                 branch = repo.branch
@@ -627,7 +627,7 @@ class update(DirectoryCommand):
                 if protocol is "SVN":
                     do_cmd("svn update", stdout=log_file, stderr=log_file)
                 else:
-                    if args.restore_default_branch or hasattr(args, 'branch'):
+                    if args.restore_default_branch or args.branch is not None:
                         do_cmd("git checkout {}".format(branch),
                                stdout=log_file, 
                                stderr=log_file)
