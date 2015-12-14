@@ -14,6 +14,7 @@
 # for installation in general. In particular, if you source the .sh file
 # referenced below, you can install each piece mannually and see how it goes.
 
+
 pushd ${0%/*}
 
 source ../lib/install_util.sh
@@ -36,8 +37,8 @@ if [ "$1." = "--install." ]; then
     install_eagle 
     install_arduino 
     install_GAE 
-    init_github 
-    setup_user_ssh
+    #init_github 
+    #setup_user_ssh
 fi
 
 fix_up
