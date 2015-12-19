@@ -21,4 +21,4 @@ libxml2-dev
 libxslt1-dev
 arduino
 vim
-
+zip

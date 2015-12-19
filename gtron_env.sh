@@ -64,6 +64,7 @@ $GADGETRON_ROOT/Tools/:\
 $PYTHONPATH
 
 # in order of preference
+# Don't include 7.5.0 unless you are also going to fix the order in that pass the .sch and .brd files to Eagle.  It has be in the right order or eagle will choke, and the correct order has changed in 7.5.0
 EAGLE_VERSIONS=("7.4.0" "7.2.0" "7.3.0" "7.1.0" "7.0.1" "7.0.0")
 
 # look for versions on on mac
