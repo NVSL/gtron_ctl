@@ -1,7 +1,7 @@
 {
     "repos": [
         {
-            "directory": "EagleServer",
+            "directory": "Gadgets/Tools",
             "url": "https://github.com/NVSL/EagleServer.git"
         },
         {
