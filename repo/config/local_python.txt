@@ -1,3 +1,4 @@
+matplotlib
 formencode
 autopep8
 recordclass
