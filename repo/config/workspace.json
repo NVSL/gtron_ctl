@@ -17,6 +17,10 @@
             "url": "$NVSL_GIT/BOMGenerator"
         },
         {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/TAZI"
+        },
+        {
             "directory": "Gadgets/Libraries",
             "url": "$NVSL_GIT/GadgetronSketchBook"
         },
