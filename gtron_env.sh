@@ -58,6 +58,7 @@ $GADGETRON_ROOT/Tools/Checkers:\
 $GADGETRON_ROOT/Tools/GCompiler:\
 $GADGETRON_ROOT/Tools/gcam:\
 $GADGETRON_ROOT/Tools/CircuitsByCode:\
+$GADGETRON_ROOT/Tools/GadgetMaker2:\
 $GADGETRON_ROOT/Tools/CircuitsByCode/Extensions:\
 $GADGETRON_ROOT/Tools/CbC:\
 $GADGETRON_ROOT/Tools/:\
