@@ -446,7 +446,11 @@ class DirectoryCommand(Command):
     @classmethod
     def go(cls, workspace, args):
         oldPWD = os.getcwd()
-        cls.pre_flight(workspace, args)
+        try:
+            cls.pre_flight(workspace, args)
+        except CmdFailure as e:
+            log.error(e)
+            raise e;
         workspace.expand_variables()
         if len(args.directories) == 0:
             repo_list = workspace.repos()
@@ -500,7 +504,6 @@ class DirectoryCommand(Command):
                             
             except CmdFailure as e:
 
-                log.info("here")
                 if cls.needs_log:
                     log_file.write(str(e))
                 if not dry_run and cls.pretty_print:
@@ -662,7 +665,44 @@ class update(DirectoryCommand):
             else:
                 log.exception(e)
                 raise e
+
+class push(DirectoryCommand):
+    """
+
+    push all the repos.  Only for git, does :code:`git push`.
+
+    """
+    description="'git push' all directories."
+    help="Push changes to mastetr"
+    log_file_prefix="push"
+
+    @classmethod  
+    def directory_op(cls, repo, workspace, args, log_file):
+        try:
+            success_message="SUCCESS"
+            protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
+            if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
+                log.info("Directory exists...updating")
+                chdir(workspace.absolute_path(repo.full_directory))
+
+                assert protocol is not "SVN"
+                (r, out, err) = do_cmd("git push",
+                                       stdout=log_file, 
+                                       stderr=log_file)
+                if not dry_run:
+                    if err.find("There is no tracking information for the current branch") is not -1:
+                        success_message = "MISSING UPSTREAM BRANCH"
+            if not dry_run:
+                return (True, success_message)
             
+        except Exception as e:
+            if not dry_run:
+                log_file.write(str(e))
+                return (False, "FAILED")
+            else:
+                log.exception(e)
+                raise e
+
 class ubt(DirectoryCommand):
     """Update, build, and test all the repos.  Equivalent to
 
@@ -1087,6 +1127,7 @@ def main(argv):
     
     panda.add_command(full_docs)
     panda.add_command(update)
+    panda.add_command(push)
     panda.add_command(build)
     panda.add_command(test)
     panda.add_command(ubt)
