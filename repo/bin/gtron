@@ -676,6 +676,17 @@ class push(DirectoryCommand):
     help="Push changes to mastetr"
     log_file_prefix="push"
 
+    @classmethod
+    def pre_flight(cls, workspace, args):
+        (r, out, err) = do_cmd("git push", cwd=workspace.devel_root, stdout=None, stderr=None, raise_on_err=False)
+        if dry_run:
+            return
+        if r is not 0:
+            if err.find("There is no tracking information for the current branch") is not -1:
+                log.warn("Couldn't pull updates for gtron because branch doesn't exist in upstream")
+            else:
+                raise CmdFailure(r, out, err)
+                
     @classmethod  
     def directory_op(cls, repo, workspace, args, log_file):
         try:
