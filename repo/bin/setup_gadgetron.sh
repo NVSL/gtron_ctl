@@ -11,6 +11,7 @@ gtron --force config_set github_user $1
 #gtron --force config_set branch master
 
 source ../lib/install_util.sh
+source ../lib/install_common.sh
 
 confirm_gadgetron
 
@@ -30,8 +31,7 @@ source $GADGETRON_VENV/bin/activate
 
 confirm_venv
 
-banner "Installing local python dependencies"
-pip install -r ../config/local_python.txt | save_log local_python
+install_local_python
 
 banner "(re)building cgal bindings from git"
 mkdir -p ../build

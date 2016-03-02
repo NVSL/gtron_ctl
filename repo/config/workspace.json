@@ -6,6 +6,10 @@
         },
         {
             "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Gadgetron"
+        },
+        {
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Swoop"
         },
         {
@@ -27,10 +31,6 @@
         {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/dummysch"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Gadgetron"
         },
         {
             "directory": "Gadgets/Tools",

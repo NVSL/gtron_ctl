@@ -31,6 +31,7 @@ fi
 check_for_package_manager
 install_system_packages 
 install_global_python 
+install_local_python 
 install_global_javascript 
 
 if [ "$1." = "--install." ]; then
