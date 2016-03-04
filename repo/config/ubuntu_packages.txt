@@ -22,6 +22,4 @@ libxslt1-dev
 arduino
 vim
 zip
-geos
-
-
+libgeos-dev

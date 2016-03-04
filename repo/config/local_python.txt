@@ -25,3 +25,4 @@ webapp2
 html5lib
 webob
 descartes
+gsutil
