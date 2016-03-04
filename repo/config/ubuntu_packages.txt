@@ -1,4 +1,3 @@
-install
 python-pip
 libspatialindex-dev
 python-pygame
@@ -23,3 +22,5 @@ arduino
 vim
 zip
 libgeos-dev
+
+
