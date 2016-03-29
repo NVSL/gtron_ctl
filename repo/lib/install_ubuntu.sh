@@ -13,7 +13,7 @@ function install_system_packages() {
     banner "Installing system-wide packages (this may take a while)."
 
     $SUDO apt-get update | save_log update_apt_get
-    verify_success
+    #verify_success # apt-get fails for non-critical reasons (like missing third-party indexes)
     $SUDO apt-get -y install $(cat ../config/ubuntu_packages.txt) | save_log install_system_packages
     verify_success
     #sudo apt-get remove arduino #  It's the wrong version, but it gives us all the support libs (E.g., java)

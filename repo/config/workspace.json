@@ -10,10 +10,6 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Swoop"
-        },
-        {
-            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/BOBBuilder"
         },
         {
@@ -131,11 +127,6 @@
             "directory": "Gadgets/Tools",
             "order": "1000",
             "url": "$NVSL_GIT/jet"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "order": "700",
-            "url": "$NVSL_GIT/CbC"
         }
     ],
     "vars": {

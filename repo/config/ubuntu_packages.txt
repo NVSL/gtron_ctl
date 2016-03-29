@@ -21,6 +21,9 @@ libxslt1-dev
 arduino
 vim
 zip
+libfreetype6-dev
+libpng-dev
+libffi-dev
 libgeos-dev
 
 
