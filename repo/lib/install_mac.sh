@@ -21,7 +21,7 @@ function install_system_packages() {
     banner Installing Brew packages
     
     (brew tap homebrew/x11 &&
-     brew install python spatialindex cgal swig sdl sdl_image sdl_mixer sdl_ttf portmidi hg inkscape curl nodejs libxml2 libxslt wget) 2>&1 | save_log install_brew_packages
+     brew install $(cat ../config/brew_packages.txt) 2>&1 )| save_log install_brew_packages
     verify_success
 }
 
