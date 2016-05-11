@@ -102,6 +102,11 @@ if [ -e /gro/cad/eagle-7.2.0/bin/eagle ]; then
     export EAGLE_EXE=/gro/cad/eagle-7.2.0/bin/eagle
 fi
 
+#For gcloud servers
+if [ -e $HOME/eagle.sh ]; then
+    export EAGLE_EXE=/$HOME/eagle.sh
+fi
+
 if [ ".$EAGLE_EXE" = "." ]; then
     echo "Couldn't set EAGLE_EXE.  Please edit setup_gadgets so that others who use your OS won't have this problem in the future"
 fi
