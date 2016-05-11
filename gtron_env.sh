@@ -103,8 +103,8 @@ if [ -e /gro/cad/eagle-7.2.0/bin/eagle ]; then
 fi
 
 #For gcloud servers
-if [ -e $HOME/eagle.sh ]; then
-    export EAGLE_EXE=/$HOME/eagle.sh
+if [ -e $(readlink -f ../eagle.sh) ]; then
+    export EAGLE_EXE=$(readlink -f ../eagle.sh)
 fi
 
 if [ ".$EAGLE_EXE" = "." ]; then
