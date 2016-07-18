@@ -6,6 +6,10 @@
         },
         {
             "directory": "Gadgets/Tools",
+            "url": "https://github.com/NVSL/PubSubWrapper.git"
+        },
+        {
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Gadgetron"
         },
         {
