@@ -9,8 +9,15 @@ else
     branch=$1
 fi
 
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh
-curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh
+if ! curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh; then
+    echo couldn't download install_util.sh;
+    exit 1
+fi
+    
+if ! curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh; then
+    echo couldn't download install_util.sh;
+    exit 1
+fi
 
 source install_util.sh
 source install_common.sh

@@ -2,7 +2,11 @@
     "repos": [
         {
             "directory": "Gadgets/Tools",
-            "url": "https://github.com/NVSL/EagleServer.git"
+            "url": "$NVSL_GIT/EagleServer"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/PubSubWrapper"
         },
         {
             "directory": "Gadgets/Tools",

@@ -25,5 +25,4 @@ libfreetype6-dev
 libpng-dev
 libffi-dev
 libgeos-dev
-
-
+doxygen
