@@ -10,7 +10,11 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "https://github.com/NVSL/PubSubWrapper.git"
+            "url": "$NVSL_GIT/GeocheckServer"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/PubSubWrapper"
         },
         {
             "directory": "Gadgets/Tools",
