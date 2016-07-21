@@ -42,7 +42,10 @@ EOF
 
 function install_local_python() {
     banner "Installing local python packages..."
-    pip install --upgrade -r ../config/local_python.txt | save_log local_python
+    # read the file explicitly to that prerequisites are actually installed if they are earlier in the file
+    for i in $(cat ../config/local_python.txt); do
+	pip install --upgrade $i
+    done | save_log local_python
     verify_success
 }
 
