@@ -1,3 +1,4 @@
+setuptools
 formencode
 autopep8
 recordclass
