@@ -42,13 +42,14 @@ EOF
 
 function install_local_python() {
     banner "Installing local python packages..."
-    pip install -r ../config/local_python.txt | save_log local_python
+    pip install --upgrade -r ../config/local_python.txt | save_log local_python
     verify_success
 }
 
 function install_global_python() {
     banner "Installing global python packages..."
-    $SUDO pip install -r ../config/global_python.txt | save_log install_global_python
+    $SUDO pip install --upgrade pip
+    $SUDO pip install --upgrade -r ../config/global_python.txt | save_log install_global_python
     verify_success
 }
 
