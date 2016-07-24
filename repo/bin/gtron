@@ -470,7 +470,8 @@ class DirectoryCommand(Command):
                 preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
                 log.info(preamble);
                 sys.stderr.write(preamble)
-                postamble_format = "{:>" + str(60 - len(preamble)) + "}[{}]\n"
+		preamble_s = len(preamble) if len(preamble) < 60 else 60
+                postamble_format = "{:>" + str(60 - preamble_s) + "}[{}]\n"
 
                  
             tmp_log_file_name=os.path.join(repo.container_directory,
