@@ -66,6 +66,8 @@ source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
 source gtron_env.sh
+install_global_python
+
 banner "Setting up global system configuration."
 gtron --force update_system --install-apps
 verify_success
@@ -97,6 +99,6 @@ banner "Completed Gadgtron setup".
 
 request "You need to do 'cd gtron_devel; source gtron_env.sh;'"
 
-request "Then you can type ' (cd Gadgets/Tools/jet_2/; make run)' to start jet."
+request "Then you can type ' (cd Gadgets/Tools/jet_2/; utils/start_jet.sh)' to start jet."
 
 request "Type 'gtron full_docs' to learn how to use the 'gtron' utility to manage this workspace."
