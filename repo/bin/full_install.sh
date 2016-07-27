@@ -66,19 +66,19 @@ source repo/lib/install_util.sh
 source repo/lib/install_common.sh
 
 source gtron_env.sh
-banner "Setting up global system configuration."
-gtron --force update_system --install-apps
-verify_success
+(cd repo/lib; install_global_python) # This will get us virtualenv. 
 
-if [ "$SYSTEM_SETUP_ONLY." = "yes." ]; then
-    exit 0
-fi
-source gtron_env.sh
 
 banner "Setting up development environment (this may take a while)."
 gtron --force setup_devel --github-user $github_user
 verify_success
 activate_gadgetron
+
+banner "Setting up global system configuration."
+gtron --force update_system --install-apps
+verify_success
+
+source gtron_env.sh
 
 if [ "$DEVEL_SETUP_ONLY." = "yes." ]; then
     exit 0
@@ -97,6 +97,6 @@ banner "Completed Gadgtron setup".
 
 request "You need to do 'cd gtron_devel; source gtron_env.sh;'"
 
-request "Then you can type ' (cd Gadgets/Tools/jet_2/; make run)' to start jet."
+request "Then you can type ' (cd Gadgets/Tools/jet_2/; utils/start_jet.sh)' to start jet."
 
 request "Type 'gtron full_docs' to learn how to use the 'gtron' utility to manage this workspace."

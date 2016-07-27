@@ -23,13 +23,16 @@ source ../lib/install_common.sh
 
 if [ "$(uname)." = "Darwin." ]; then
     source ../lib/install_mac.sh
+    echo I am a mac
 else
     source ../lib/install_ubuntu.sh
     SUDO="sudo -H"
+    echo I am a pc
 fi
 
+
 check_for_package_manager
-install_system_packages 
+install_system_packages
 install_global_python 
 install_local_python 
 install_global_javascript 
