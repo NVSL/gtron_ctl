@@ -37,14 +37,6 @@
             "url": "$NVSL_GIT/GadgetronSketchBook"
         },
         {
-            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
-            "url": "$NVSL_GIT/Adafruit_LED_Backpack"
-        },
-        {
-            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
-            "url": "$NVSL_GIT/Adafruit-GFX-Library"
-        },
-        {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/dummysch"
         },
@@ -75,6 +67,14 @@
         {
             "directory": "Gadgets/Libraries",
             "url": "$NVSL_GIT/JetComponents"
+        },
+	{
+            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
+            "url": "$NVSL_GIT/Adafruit_LED_Backpack"
+        },
+        {
+            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
+            "url": "$NVSL_GIT/Adafruit-GFX-Library"
         },
         {
             "directory": "Gadgets/Tools",
