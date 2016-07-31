@@ -20,11 +20,12 @@ import platform
 dry_run = False;
 
 class TermColors:
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    GREEN = '\033[92m'
-    WARNING = '\033[93m'
-    FAIL = '\033[91m'
+    HEADER = '\033[p5m'
+    OKBLUE = '\033[p4m'
+    GREEN = '\033[42m\033[97m'
+    WARNING = '\033[97m'
+#    WARNING = '\033[43m\033[97m'
+    FAIL = '\033[41m\033[97m'
     ENDC = '\033[0m'
     BOLD = '\033[1m'
     UNDERLINE = '\033[4m'
@@ -32,7 +33,7 @@ class TermColors:
 def in_red(s):
     return TermColors.FAIL + s + TermColors.ENDC
 def in_green(s):
-    return TermColors.GREEN + s + TermColors.ENDC
+    return TermColors.GREEN + TermColors.BOLD + s + TermColors.ENDC
 
 def chdir(d):
     log.info("Entering '{}'".format(d))
@@ -561,7 +562,7 @@ class cmd(DirectoryCommand):
 class update(DirectoryCommand):
     """
 
-    Update all the repos.  Depending on whether the repo is in SVN or git, it either does :code:`svn update` or :code:`git update`.
+    Update all the repos with :code:`git update`.
 
     :param --branch: Move to the branch provided.
     :param --default-branch: Move to the branch set in the configuration file.
@@ -623,37 +624,28 @@ class update(DirectoryCommand):
             else:
                 branch = "master"
 
-            protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
                 chdir(workspace.absolute_path(repo.full_directory))
 
-                if protocol is "SVN":
-                    do_cmd("svn update", stdout=log_file, stderr=log_file)
-                else:
-                    if args.restore_default_branch or args.branch is not None:
-                        do_cmd("git checkout {}".format(branch),
-                               stdout=log_file, 
-                               stderr=log_file)
-                    (r, out, err) = do_cmd("git pull", raise_on_err=False, stdout=log_file, stderr=log_file)
-                    if not dry_run:
-                        if err.find("There is no tracking information for the current branch") is not -1:
-                            success_message = "MISSING UPSTREAM BRANCH"
-                        
+                if args.restore_default_branch or args.branch is not None:
+                    do_cmd("git checkout {}".format(branch),
+                           stdout=log_file, 
+                           stderr=log_file)
+                (r, out, err) = do_cmd("git pull", raise_on_err=False, stdout=log_file, stderr=log_file)
+                if not dry_run:
+                    if err.find("There is no tracking information for the current branch") is not -1:
+                        success_message = "MISSING UPSTREAM BRANCH"
+
 
             else:
                 log.info("Directory doesn't exist...checking out")
-                if protocol is "SVN":
-                    do_cmd("(cd {} && svn co {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
-                                                                       repo.url,
-                                                                       repo.repo_directory), stdout=log_file, stderr=log_file)
-                else:
-                    do_cmd("(cd {} && git clone -b {} {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
-                                                                                branch,
-                                                                                repo.url,
-                                                                                repo.repo_directory), 
-                           stdout=log_file, 
-                           stderr=log_file)
+                do_cmd("(cd {} && git clone -b {} {} && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                                                                            branch,
+                                                                            repo.url,
+                                                                            repo.repo_directory), 
+                       stdout=log_file, 
+                       stderr=log_file)
 
             if not dry_run:
                 return (True, success_message)
@@ -692,12 +684,10 @@ class push(DirectoryCommand):
     def directory_op(cls, repo, workspace, args, log_file):
         try:
             success_message="SUCCESS"
-            protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
             if os.path.isdir(os.path.join(workspace.devel_root, repo.full_directory)):
                 log.info("Directory exists...updating")
                 chdir(workspace.absolute_path(repo.full_directory))
 
-                assert protocol is not "SVN"
                 (r, out, err) = do_cmd("git push",
                                        stdout=log_file, 
                                        stderr=log_file)
@@ -867,7 +857,7 @@ class config_set(Command):
 class add_repo(Command):
     """Add a repo to the workspace.
     
-    :param --repo: Git or SVN URL for the repo.
+    :param --repo: Git URL for the repo.
     :param --direcotry: Directory that the repo should reside in.
     
     """
@@ -987,8 +977,8 @@ class config_dump(Command):
                   separators=(', ', ' : '))
 
 class diff(DirectoryCommand):
-    """Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
-    description="""Run 'diff' an all the repos.  SVN and git both have a 'diff' command but they behave slightly differently.  This command concatenates all the outputs, and adds heading for each repo, so the output is not a legal patch."""
+    """Run 'diff' an all the repos. """
+    description="""Run 'diff' an all the repos. """
     help="Run diff of each repo."
     needs_log=False
     pretty_print=False
@@ -998,16 +988,12 @@ class diff(DirectoryCommand):
         chdir(workspace.absolute_path(repo.full_directory))
         sys.stdout.write("{:=^80}\n".format(repo.full_directory))
         sys.stdout.flush()
-        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
-        if protocol is "SVN":
-            do_cmd("svn diff")
-        else:
-            do_cmd("git --no-pager diff")
+        do_cmd("git --no-pager diff")
         return (True, None)
 
 class status(DirectoryCommand):
-    """Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."""
-    description="Run status command on all the repos.  'status' gives slightly different information for SVN and git, so you'll need to make sense of that."
+    """Run status command on all the repos.  'status' gives slightly different information for  git, so you'll need to make sense of that."""
+    description="Run status command on all the repos.  'status' gives slightly different information for git, so you'll need to make sense of that."
     help="Run 'status' on each repo"
     needs_log=False
     pretty_print=False
@@ -1017,11 +1003,7 @@ class status(DirectoryCommand):
         chdir(workspace.absolute_path(repo.full_directory))
         sys.stdout.write("{:=^80}\n".format(repo.full_directory))
         sys.stdout.flush()
-        protocol = "SVN" if re.search("^svn", repo.url) is not None else "GIT"
-        if protocol is "SVN":
-            do_cmd("svn status")
-        else:
-            do_cmd("git status")
+        do_cmd("git status")
         return (True, None)
 
 class sanity_check(Command):
@@ -1066,7 +1048,41 @@ class test(make):
             return (False, "FAILED")
         else:
             return (True, "SUCCESS")
-    
+
+class stat(DirectoryCommand):
+    """Intelligently check status for all repos"""
+    description="Do intelligent status check"
+    help="Do intelligent status check"
+    log_file_prefx="stat"
+
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--fast", required=False, action='store_true', help="Don't update repo state")
+        
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        chdir(workspace.absolute_path(repo.full_directory))
+        if not args.fast:
+            do_cmd("git remote update", stdout=None, stderr=None)
+        # see http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
+        (j1, LOCAL,j1)=do_cmd("git rev-parse @", stderr=None, stdout=None)
+        (j2, REMOTE,j2)=do_cmd("git rev-parse @{u}", stderr=None, stdout=None)
+        (j3, BASE,j3)=do_cmd("git merge-base @ @{u}", stderr=None, stdout=None)
+        log.debug("LOCAL = {}".format(LOCAL))
+        log.debug("REMOTE = {}".format(REMOTE))
+        log.debug("BASE = {}".format(BASE))
+        if LOCAL == REMOTE:
+            return (True, "Up-to-date")
+        elif LOCAL == BASE:
+            return (False, "Need to pull")
+        elif REMOTE == BASE:
+            return (False, "Need to push")
+        else:
+            return (False, "Diverged")
+        
+        
 def sanity(workspace):
 
     #workspace.expand_variables()
@@ -1152,6 +1168,7 @@ def main(argv):
     panda.add_command(new_design)
     panda.add_command(sanity_check)
     panda.add_command(cleanup)
+    panda.add_command(stat)
 
 
     panda.add_command(update_system)
