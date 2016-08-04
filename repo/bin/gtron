@@ -649,12 +649,9 @@ class update(DirectoryCommand):
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
                     # does auto auth with yes... maybe change at some point
-                    do_cmd("cd {} && yes \"yes\" | git clone -b {} {} && test -d {}".format(workspace.absolute_path(repo.container_directory),
-                                                                                branch,
-                                                                                repo.url,
-                                                                                repo.repo_directory), 
-                           stdout=log_file, 
-                           stderr=log_file)
+                    do_cmd("cd {}").format(workspace.absolute_path(repo.container_directory))
+                    do_cmd("yes \"yes\" | git clone -b {} {}").format(branch, repo.url)
+                    do_cmd("test -d {}".format(repo.repo_directory, stdout=log_file, stderr=log_file)
 
             if not dry_run:
                 return (True, success_message)
