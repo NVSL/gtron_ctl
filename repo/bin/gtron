@@ -649,7 +649,7 @@ class update(DirectoryCommand):
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
                     # does auto auth with yes... maybe change at some point
-                    do_cmd("(cd {} && \"yes 'yes' | git clone -b {} {}\" && test -d {})".format(workspace.absolute_path(repo.container_directory),
+                    do_cmd("cd {} && git clone -b {} {} && test -d {}".format(workspace.absolute_path(repo.container_directory),
                                                                                 branch,
                                                                                 repo.url,
                                                                                 repo.repo_directory), 
