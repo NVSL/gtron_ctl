@@ -647,7 +647,7 @@ class update(DirectoryCommand):
                 log.info("Directory doesn't exist...checking out")
                 if protocol is "SVN":
                     do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)), stdout=log_file, stderr=log_file)
-                    log.info("in " + os.path.getcwd())
+                    log.info("in " + os.getcwd())
                     do_cmd("svn co {}".format(repo.url), stdout=log_file, stderr=log_file)
                     do_cmd("test -d {}".format(repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
