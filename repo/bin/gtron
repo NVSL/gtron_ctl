@@ -611,7 +611,7 @@ class update(DirectoryCommand):
                 except OSError as e:
                     if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
                         log.error("Couldn't make directory {}.".format(repo.container_directory))
-                        raise
+                        raise e
 
 
             if args.branch is not None:
@@ -649,9 +649,9 @@ class update(DirectoryCommand):
                                                                        repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
                     
-                    do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)))
+                    do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)), stdout=log_file, stderr=log_file)
 
-                    do_cmd("git clone -b {} {}".format(branch, repo.url))
+                    do_cmd("git clone -b {} {}".format(branch, repo.url), stdout=log_file, stderr=log_file)
 
                     do_cmd("test -d {}".format(repo.repo_directory), stdout=log_file, stderr=log_file)
 
