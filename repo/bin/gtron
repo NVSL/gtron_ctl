@@ -41,9 +41,8 @@ def chdir(d):
     else:
         try:
             os.chdir(d)
-        except Exception as e:
-            log.error("Can't change to {}".format(d))
-            sys.exit(1)
+        except OSError as e:
+            log.critical("Can't change to {}".format(d))
     
 class Repo:
     def __init__(self, json, count=0, local=False):
@@ -653,7 +652,8 @@ class update(DirectoryCommand):
                 else:
                     
                     #do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)), stdout=log_file, stderr=log_file)
-                    os.chdir(workspace.absolute_path(repo.container_directory))
+                    chdir(workspace.absolute_path(repo.container_directory))
+
                     log.info("in " + os.getcwd())
                     do_cmd("git clone -b {} {}".format(branch, repo.url), stdout=log_file, stderr=log_file)
 
