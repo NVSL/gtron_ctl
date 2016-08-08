@@ -606,11 +606,13 @@ class update(DirectoryCommand):
                 print "Create directory {}, if needed.".format(repo.container_directory)
             else:
                 try:
-                    log.info("Making directory {}".format(repo.container_directory))
-                    os.makedirs(os.path.join(workspace.devel_root, repo.container_directory))
+                    path = os.path.join(workspace.devel_root, repo.container_directory)
+                    log.info("Making directory {}".format(path))
+                    os.makedirs(path)
                 except OSError as e:
                     if not os.path.isdir(os.path.join(workspace.devel_root, repo.container_directory)):
                         log.error("Couldn't make directory {}.".format(repo.container_directory))
+                        success_message = "COULD NOT MAKE DIR"
                         raise e
 
 
