@@ -652,7 +652,8 @@ class update(DirectoryCommand):
                     do_cmd("test -d {}".format(repo.repo_directory), stdout=log_file, stderr=log_file)
                 else:
                     
-                    do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)), stdout=log_file, stderr=log_file)
+                    #do_cmd("cd {}".format(workspace.absolute_path(repo.container_directory)), stdout=log_file, stderr=log_file)
+                    os.chdir(workspace.absolute_path(repo.container_directory))
                     log.info("in " + os.getcwd())
                     do_cmd("git clone -b {} {}".format(branch, repo.url), stdout=log_file, stderr=log_file)
 
