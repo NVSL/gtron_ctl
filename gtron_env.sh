@@ -8,25 +8,32 @@ export GADGETRON_VENV=$PWD/repo/venv/Gadgetron
 export USE_VENV=yes
 
 #  Setup the PATH
-PATH=$GADGETRON_ROOT/Tools/BOBBuilder:\
-$GADGETRON_ROOT/Tools/EagleUtil:\
-$GADGETRON_ROOT/Tools/PADSUtil:\
-$GADGETRON_ROOT/Tools/SVGUtil:\
-$GADGETRON_ROOT/Tools/EagleArt:\
-$GADGETRON_ROOT/Tools/pcbartmaker:\
-$GADGETRON_ROOT/Tools/Gadgetron:\
-$GADGETRON_ROOT/Tools/Dingo:\
-$GADGETRON_ROOT/Tools/CaseMaker:\
-$GADGETRON_ROOT/Tools/util:\
-$GADGETRON_ROOT/Tools/cyborg:\
-$GADGETRON_ROOT/Tools/GadgetMaker2:\
-$GADGETRON_ROOT/Tools/dummysch:\
-$GADGETRON_ROOT/Tools/Checkers:\
-$GADGETRON_ROOT/Tools/GCompiler:\
+PATH=$GADGETRON_ROOT/Tools/BOBBuilder/BOBBuilder:\
+$GADGETRON_ROOT/Tools/EagleUtil/EagleUtil:\
+$GADGETRON_ROOT/Tools/PADSUtil/PADSUtil:\
+$GADGETRON_ROOT/Tools/SVGUtil/SVGUtil:\
+$GADGETRON_ROOT/Tools/EagleArt/EagleArt:\
+$GADGETRON_ROOT/Tools/pcbartmaker/pcbartmaker:\
+$GADGETRON_ROOT/Tools/Gadgetron/Gadgetron:\
+$GADGETRON_ROOT/Tools/Dingo/Dingo:\
+$GADGETRON_ROOT/Tools/CaseMaker/CaseMaker:\
+$GADGETRON_ROOT/Tools/util/gtron_util:\
+$GADGETRON_ROOT/Tools/cyborg/cyborg:\
+$GADGETRON_ROOT/Tools/GadgetMaker2/GadgetMaker2:\
+$GADGETRON_ROOT/Tools/dummysch/dummysch:\
+$GADGETRON_ROOT/Tools/Checkers/Checkers:\
+$GADGETRON_ROOT/Tools/GCompiler/GCompiler:\
 $GADGETRON_ROOT/Tools/CbC/bin:\
 /Applications/Arduino.app/Contents/MacOS:\
 $PWD/repo/bin:\
 $PATH
+
+export PATH
+
+export STANDARD_CACHE_DIR="$PWD/repo/cache/pip"
+export WHEELHOUSE="${STANDARD_CACHE_DIR}/wheelhouse"
+export PIP_FIND_LINKS="file://${WHEELHOUSE}"
+export PIP_WHEEL_DIR="${WHEELHOUSE}"
 
 function activate_gadgetron () {
     source $(which activate_gadgetron.sh)
@@ -47,22 +54,8 @@ export DOWNLOAD_DIR=$HOME/Downloads
 
 export GADGETRON_COMPONENT_LIB=$GADGETRON_ROOT/Libraries/JetComponents
 
-export PYTHONPATH=$GADGETRON_ROOT/../repo/bin:\
-$GADGETRON_ROOT/Tools/EagleUtil:\
-$GADGETRON_ROOT/Tools/Gadgetron:\
-$GADGETRON_ROOT/Tools/Dingo:\
-$GADGETRON_ROOT/Tools/util:\
-$GADGETRON_ROOT/Tools/SVGUtil:\
-$GADGETRON_ROOT/Tools/EagleArt:\
-$GADGETRON_ROOT/Tools/Checkers:\
-$GADGETRON_ROOT/Tools/GCompiler:\
-$GADGETRON_ROOT/Tools/gcam:\
-$GADGETRON_ROOT/Tools/CircuitsByCode:\
-$GADGETRON_ROOT/Tools/GadgetMaker2:\
-$GADGETRON_ROOT/Tools/CircuitsByCode/Extensions:\
-$GADGETRON_ROOT/Tools/CbC:\
-$GADGETRON_ROOT/Tools/:\
-$PYTHONPATH
+export PYTHONPATH=$GADGETRON_ROOT/../repo/bin:$PYTHONPATH
+
 
 # in order of preference
 # Don't include 7.5.0 unless you are also going to fix the order in that pass the .sch and .brd files to Eagle.  It has be in the right order or eagle will choke, and the correct order has changed in 7.5.0

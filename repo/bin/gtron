@@ -461,18 +461,12 @@ class DirectoryCommand(Command):
                 log.info("Running in {}".format(d))
                 r = workspace.get_repo(d)
                 if r is None:
-                    log.error("Couldn't find repo/directory in workspace config: '{}'.".format(d))
-                    sys.exit(1)
+                    log.warning("Couldn't find repo/directory in workspace config: '{}'.".format(d))
+                    continue;
                 else:
                     repo_list.append(r)
 
         for repo in repo_list:
-            if not dry_run and cls.pretty_print:
-                preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
-                log.info(preamble);
-                sys.stderr.write(preamble)
-		preamble_s = len(preamble) if len(preamble) < 60 else 60
-                postamble_format = "{:>" + str(60 - preamble_s) + "}[{}]\n"
 
                  
             tmp_log_file_name=os.path.join(repo.container_directory,
@@ -495,15 +489,27 @@ class DirectoryCommand(Command):
                 log_file = None
                 
             try:
-                r = cls.directory_op(repo, workspace, args, log_file)
+                preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
+                preamble_s = len(preamble) if len(preamble) < 60 else 60
+                postamble_format = "{:>" + str(60 - preamble_s) + "}[{}]\n"
                 if not dry_run and cls.pretty_print:
+                    log.info(preamble);
+                    sys.stderr.write(preamble)
+                r = cls.directory_op(repo, workspace, args, log_file)
+                if len(r) == 2:
+                    r = tuple(list(r) + [True])
+                    
+                if not dry_run and cls.pretty_print and r[2]:
                     success = r[0]
                     msg = r[1]
+                    log.info(preamble);
                     if success:
                         sys.stderr.write(postamble_format.format("", in_green(msg)))
                     else:
                         sys.stderr.write(postamble_format.format("", in_red(msg)))
-                            
+                if not dry_run and not r[2]:
+                    sys.stderr.write("\r")
+                    
             except CmdFailure as e:
 
                 if cls.needs_log:
@@ -1058,29 +1064,58 @@ class stat(DirectoryCommand):
     @classmethod
     def add_args(cls, parser):
         DirectoryCommand.add_args(parser)
-        parser.add_argument("--fast", required=False, action='store_true', help="Don't update repo state")
+        parser.add_argument("--update", required=False, action='store_true', help="Update remote state")
+        parser.add_argument("-a", "--all", required=False, action='store_true', dest="show_all", help="show status for all repos, not just ones that need attention")
         
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
         chdir(workspace.absolute_path(repo.full_directory))
-        if not args.fast:
+        if args.update:
             do_cmd("git remote update", stdout=None, stderr=None)
         # see http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
         (j1, LOCAL,j1)=do_cmd("git rev-parse @", stderr=None, stdout=None)
-        (j2, REMOTE,j2)=do_cmd("git rev-parse @{u}", stderr=None, stdout=None)
-        (j3, BASE,j3)=do_cmd("git merge-base @ @{u}", stderr=None, stdout=None)
+        (j2, REMOTE,rev_parse_err)=do_cmd("git rev-parse @{u}", stderr=None, stdout=None, raise_on_err=False)
+        (j3, BASE,j3)=do_cmd("git merge-base @ @{u}", stderr=None, stdout=None, raise_on_err=False)
         log.debug("LOCAL = {}".format(LOCAL))
         log.debug("REMOTE = {}".format(REMOTE))
         log.debug("BASE = {}".format(BASE))
+
+        clean = True
+        show = args.show_all
+        
         if LOCAL == REMOTE:
-            return (True, "Up-to-date")
+            msg = "Up-to-date"
         elif LOCAL == BASE:
-            return (False, "Need to pull")
+            clean = False
+            show = True
+            msg = "Need to pull"
         elif REMOTE == BASE:
-            return (False, "Need to push")
+            clean = False
+            show = True
+            msg = "Need to push"
         else:
-            return (False, "Diverged")
+            clean = False
+            show = True
+            msg = "Diverged"
+
+        if "no upstream configured for branch" in rev_parse_err:
+            clean = False
+            show = True
+            msg += "; Needs upstream branch"
+            
+        (j1, git_status, j2) = do_cmd("git status", stdout=None, stderr=None)
+        if git_status is not None:
+            r = git_status.find("Changes not staged for commit")
+            if r is not -1:
+                msg = msg + "; needs commit"
+                clean = False;
+                show = True
+            r= re.search("On branch (\w+)",git_status)
+            branch = r.group(1)
+            msg = msg + " ({})".format(branch)
+
+        return (clean, msg, show)
         
         
 def sanity(workspace):
