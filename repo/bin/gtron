@@ -269,7 +269,9 @@ class CmdFailure(Exception):
         self.stdout = stdout
         self.stderr = stderr
         self.returncode = returncode
-        
+    def __str__(self):
+        return "{}\n{}\nreturn code={}".format(self.stdout, self.stderr, self.returncode)
+    
 def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False, raise_on_err=True, cwd=None):
     if dry_run is True:
         output = ""
@@ -700,13 +702,12 @@ class push(DirectoryCommand):
                 if not dry_run:
                     if err.find("There is no tracking information for the current branch") is not -1:
                         success_message = "MISSING UPSTREAM BRANCH"
-            if not dry_run:
-                return (True, success_message)
+            return (True, success_message, True)
             
         except Exception as e:
             if not dry_run:
                 log_file.write(str(e))
-                return (False, "FAILED")
+                return (False, "FAILED", True)
             else:
                 log.exception(e)
                 raise e
@@ -810,13 +811,21 @@ class list_repos(Command):
                             action='store_true',
                             default=False,
                             help="Expand variables")
+        parser.add_argument("--dirs",
+                            required=False,
+                            action='store_true',
+                            default=False,
+                            help="List directories only")
 
     @classmethod
     def go(cls, workspace, args):
         if args.eval:
             workspace.expand_variables()
         for repo in workspace.repos():
-            print "{}: {}".format(repo.full_directory, repo.url)
+            if args.dirs:
+                print "{}".format(repo.full_directory)
+            else:
+                print "{}: {}".format(repo.full_directory, repo.url)
                 
 
 class config_lint(Command):
