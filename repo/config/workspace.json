@@ -2,22 +2,6 @@
     "repos": [
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/EagleServer"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/PubSubWrapper"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/GeocheckServer"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/PubSubWrapper"
-        },
-        {
-            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Gadgetron"
         },
         {
@@ -54,27 +38,11 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Koala"
-        },
-        {
-            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/GadgetMaker2"
         },
         {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/ucsdgadgetron"
-        },
-        {
-            "directory": "Gadgets/Libraries",
-            "url": "$NVSL_GIT/JetComponents"
-        },
-	{
-            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
-            "url": "$NVSL_GIT/Adafruit_LED_Backpack"
-        },
-        {
-            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
-            "url": "$NVSL_GIT/Adafruit-GFX-Library"
         },
         {
             "directory": "Gadgets/Tools",
@@ -129,13 +97,25 @@
             "url": "$NVSL_GIT/GadgetronPCBLibs"
         },
         {
-            "directory": "Gadgets/Designs",
-            "url": "$NVSL_GIT/testGadget"
-        },
-        {
             "directory": "Gadgets/Tools",
             "order": "700",
             "url": "$NVSL_GIT/CbC"
+        },
+	{
+	    "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/Koala"
+        },
+        {
+            "directory": "Gadgets/Libraries",
+            "url": "$NVSL_GIT/JetComponents"
+        },
+	{
+            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
+            "url": "$NVSL_GIT/Adafruit_LED_Backpack"
+        },
+        {
+            "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
+            "url": "$NVSL_GIT/Adafruit-GFX-Library"
         },
         {
             "directory": "Gadgets/Designs",
@@ -143,10 +123,30 @@
             "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
         },
+	{
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/EagleServer"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/PubSubWrapper"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/GeocheckServer"
+        },
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/PubSubWrapper"
+        },
         {
             "directory": "Gadgets/Tools",
             "order": "1000",
             "url": "$NVSL_GIT/jet"
+        },
+	{
+            "directory": "Gadgets/Designs",
+            "url": "$NVSL_GIT/testGadget"
         }
     ],
     "vars": {
