@@ -1,5 +1,4 @@
 bower
 tsd
-grunt@0.4.1
+grunt
 grunt-cli 
-grunt-npm-install

@@ -20,7 +20,7 @@ export CPATH=/usr/include/libxml2
 
 banner "Setting up local build environment."
 
-if ! [ -d $GADGETRON_VENV ]; then
+if ! [ -a ${GADGETRON_VENV}/activate ]; then
     banner "Creating fresh Python virtual environment: $GADGETRON_VENV"
     mkdir -p $GADGETRON_VENV
     virtualenv $GADGETRON_VENV | save_log create_venv
