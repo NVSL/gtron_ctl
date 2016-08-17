@@ -28,3 +28,4 @@ descartes
 gsutil
 matplotlib
 google-api-python-client
+gcloud
