@@ -271,12 +271,15 @@ class CmdFailure(Exception):
     def __str__(self):
         return "{}\n{}\nreturn code={}".format(self.stdout, self.stderr, self.returncode)
     
-def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False, raise_on_err=True, cwd=None):
-    if dry_run is True:
+def do_cmd(s, stdout=sys.stdout, stderr=sys.stderr, stdin=sys.stdin, live_updates=False, raise_on_err=True, cwd=None, read_only=False):
+    if dry_run is True and not read_only:
         output = ""
         print s
         return (None,None,None)
     else:
+        if dry_run:
+            print s
+        
         log.info("Executing: " + s);
         if live_updates:
             p = subprocess.Popen(s, shell=True, stdout=stdout, stderr=stderr, stdin=stdin, cwd=cwd);
@@ -431,12 +434,16 @@ class DirectoryCommand(Command):
     log_file_prefix="command"
     needs_log=True
     pretty_print=True
+    auto_all=True
     
     @classmethod
     def add_args(cls, parser):
+        parser.add_argument("--doall",
+                            action="store_true",
+                            help="Run command in all repos")
         parser.add_argument("directories",
                             nargs="*",
-                            help="Directories to operate on (default: all of them)")
+                            help="Directories to operate on")
     @classmethod
     def pre_flight(cls, workspace, args):
         pass
@@ -454,9 +461,14 @@ class DirectoryCommand(Command):
             log.error(e)
             raise e;
         workspace.expand_variables()
+
         if len(args.directories) == 0:
-            repo_list = workspace.repos()
-        else:
+            if cls.auto_all or args.doall:
+                repo_list = workspace.repos()
+            else:
+                args.directories = ["."]
+                
+        if len(args.directories) > 0:
             repo_list = []
             for d in map(workspace.path_relative_to_root, args.directories):
                 log.info("Running in {}".format(d))
@@ -468,10 +480,8 @@ class DirectoryCommand(Command):
                     repo_list.append(r)
 
         for repo in repo_list:
-
-                 
             tmp_log_file_name=os.path.join(repo.container_directory,
-                                           "{}-{}.gtron-log.txt".format(repo.repo_directory, cls.log_file_prefix))
+                                           "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
 
             try: 
                 os.makedirs(workspace.absolute_path(repo.container_directory))
@@ -546,19 +556,19 @@ class cmd(DirectoryCommand):
 
     @classmethod
     def add_args(cls, parser):
-        DirectoryCommand.add_args(parser)
-        parser.add_argument("--cmd",
-                            nargs="+",
-                            dest='cmd',
-                            default=[],
+        parser.add_argument(dest='cmd',
+                            nargs=1,
                             help="Shell command")
+        DirectoryCommand.add_args(parser)
 
+            
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
+
         chdir(workspace.absolute_path(repo.full_directory))
         print "============ {} ============".format(repo.full_directory)
         try:
-            do_cmd(" ".join(args.cmd))
+            do_cmd(args.cmd[0])
             return (True, "Success")
         except Exception as e:
             log.exception(e)
@@ -1063,6 +1073,153 @@ class test(make):
         else:
             return (True, "SUCCESS")
 
+def load_version():
+    text = open("VERSION.txt", "r").read().split("\n")[0]
+    text = text.strip()
+    return text.split(".")
+
+class release(DirectoryCommand):
+    """Merge master into release"""
+    description="Merge master into release"
+    help="Merge dev branch into release branch"
+    log_file_prefix="release"
+    auto_all=False
+    pretty_print = True;
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--dev_branch", default="master", help="Branch to treat as the development branch")
+        parser.add_argument("--rel_branch", default="release", help="Branch to treat as the release branch")
+        parser.add_argument("--force", action="store_true", help="Release even if there are no changes")
+        
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+
+        def version_gt(a, b):
+            a = map(int, a);
+            b = map(int, b);
+            if a[0] > b[0]:
+                return True;
+            elif a[0] < b[0]:
+                return False;
+            elif a[1] > b[1]:
+                return True;
+            elif a[1] < b[1]:
+                return False;
+            elif a[2] > b[2]:
+                return True;
+            else:
+                return False;
+                    
+        chdir(workspace.absolute_path(repo.full_directory))
+        (j1, current_branch,j1)=do_cmd("git rev-parse --abbrev-ref HEAD", stderr=None, stdout=None, read_only=True)
+        current_branch =current_branch.strip()
+        if current_branch != args.dev_branch:
+            return (False, "Wrong Branch: {}; should be {}".format(current_branch, args.dev_branch))
+
+        # on the dev branch
+        (LOCAL, REMOTE,BASE, junk) = check_up_to_date();
+
+        try:
+            if LOCAL != REMOTE:
+                return (False, "{} need pull and/or push".format(args.dev_branch))
+
+            (j1, git_status, j2) = do_cmd("git status", stdout=None, stderr=None)
+            if git_status is not None:
+                if "Changes not staged for commit" in git_status:
+                    return (False, "{} needs commit".format(args.dev_branch))
+
+            # check if the two version have diverged
+            (j2, DEV,j3)=do_cmd("git rev-parse {}".format(args.dev_branch), stderr=None, stdout=None, raise_on_err=False, read_only=True)
+            (j2, REL,j3)=do_cmd("git merge-base {} {}".format(args.dev_branch, args.rel_branch), stderr=None, stdout=None, raise_on_err=False, read_only=True)
+
+            if DEV == REL and not args.force:
+                return (True, "No release needed")
+
+            # Make sure the old version is different than the new
+            (j1, dev_version, j2) =  do_cmd('git show HEAD:VERSION.txt', read_only=True, stdout=None)
+            (j1, release_version, j2) =  do_cmd('git show {}:VERSION.txt'.format(args.rel_branch), read_only=True, stdout=None)
+            dev_version = dev_version.strip()
+            release_version = release_version.strip()
+            dv = dev_version.split(".")
+            rv = release_version.split(".")
+
+            if not version_gt(dv, rv):
+                return (False, "Dev version too low")
+
+            # switch to release branch
+            do_cmd("git checkout {}".format(args.rel_branch),stderr=None, stdout=None)
+
+            (LOCAL, REMOTE,BASE, junk) = check_up_to_date();
+            if LOCAL != REMOTE:
+                return (False, "{} Not synced with origin".format(args.rel_branch))
+
+            do_cmd("git merge {}".format(args.dev_branch), stderr=None, stdout=None)
+            do_cmd("git tag -a v{} -m 'version {}'".format(dev_version, dev_version), stderr=None, stdout=None)
+            do_cmd("git push", stderr=None, stdout=None)
+            do_cmd("git push origin v{}".format(dev_version), stderr=None, stdout=None)
+
+            return (True, "Success")
+        finally:
+            do_cmd('git checkout {}'.format(current_branch),stderr=None, stdout=None)
+            
+class bump_version(DirectoryCommand):
+    """Increase version number"""
+    description="Increase version number"
+    help="Increase version number"
+    auto_all=False
+    log_file_prefix="bump_version"
+    
+    @classmethod
+    def add_args(cls, parser):
+        DirectoryCommand.add_args(parser)
+        parser.add_argument("--patch", required=False, action='store_true', help="bump the last version number.")
+        parser.add_argument("--minor", required=False, action='store_true', help="bump the middle version number.")
+        parser.add_argument("--major", required=False, action='store_true', help="bump the major version number")
+        parser.add_argument("--push", required=False, action='store_true', help="commit and push")
+
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        s = 0;
+        if args.patch:
+            s+=1
+        if args.minor:
+            s+=1
+        if args.major:
+            s+=1
+        assert s == 1, "Must specify one of --major, --minor, or --patch"
+
+        try:
+            chdir(workspace.absolute_path(repo.full_directory))
+            (major,minor,patch) = load_version()
+            if args.patch:
+                patch = int(patch) + 1
+
+            if args.minor:
+                minor = int(minor) + 1
+                patch = 0
+
+            if args.major:
+                major = int(major) + 1
+                minor = 0;
+                patch = 0
+
+            open("VERSION.txt", "w").write("{}.{}.{}\n".format(major,minor,patch))
+            if args.push:
+                do_cmd("git commit -m 'Set version' VERSION.txt", stdout=None, stderr=None)
+                do_cmd("git push", stdout=None, stderr=None)
+                
+            return (True, "SUCCESS")
+        except Exception as e:
+            log.error(e)
+            return (False, "FAILED")
+
+def check_up_to_date():
+    (j1, LOCAL,j1)=do_cmd("git rev-parse @", stderr=None, stdout=None, read_only=True)
+    (j2, REMOTE,rev_parse_err)=do_cmd("git rev-parse @{u}", stderr=None, stdout=None, raise_on_err=False, read_only=True)
+    (j3, BASE,j3)=do_cmd("git merge-base @ @{u}", stderr=None, stdout=None, raise_on_err=False, read_only=True)
+    return (LOCAL,REMOTE, BASE, rev_parse_err)
+
 class stat(DirectoryCommand):
     """Intelligently check status for all repos"""
     description="Do intelligent status check"
@@ -1074,7 +1231,7 @@ class stat(DirectoryCommand):
         DirectoryCommand.add_args(parser)
         parser.add_argument("--update", required=False, action='store_true', help="Update remote state")
         parser.add_argument("-a", "--all", required=False, action='store_true', dest="show_all", help="show status for all repos, not just ones that need attention")
-        
+
 
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
@@ -1082,9 +1239,9 @@ class stat(DirectoryCommand):
         if args.update:
             do_cmd("git remote update", stdout=None, stderr=None)
         # see http://stackoverflow.com/questions/3258243/check-if-pull-needed-in-git
-        (j1, LOCAL,j1)=do_cmd("git rev-parse @", stderr=None, stdout=None)
-        (j2, REMOTE,rev_parse_err)=do_cmd("git rev-parse @{u}", stderr=None, stdout=None, raise_on_err=False)
-        (j3, BASE,j3)=do_cmd("git merge-base @ @{u}", stderr=None, stdout=None, raise_on_err=False)
+
+        (LOCAL,REMOTE,BASE, rev_parse_err) = check_up_to_date()
+        
         log.debug("LOCAL = {}".format(LOCAL))
         log.debug("REMOTE = {}".format(REMOTE))
         log.debug("BASE = {}".format(BASE))
@@ -1213,7 +1370,9 @@ def main(argv):
     panda.add_command(cleanup)
     panda.add_command(stat)
 
-
+    panda.add_command(bump_version)
+    panda.add_command(release)
+    
     panda.add_command(update_system)
     panda.add_command(setup_devel)
     panda.add_command(list_repos)
