@@ -441,6 +441,9 @@ class DirectoryCommand(Command):
         parser.add_argument("--doall",
                             action="store_true",
                             help="Run command in all repos")
+        parser.add_argument("--failstop",
+                            action="store_true",
+                            help="Stop running if there's a failure")
         parser.add_argument("directories",
                             nargs="*",
                             help="Directories to operate on")
@@ -456,92 +459,97 @@ class DirectoryCommand(Command):
     def go(cls, workspace, args):
         oldPWD = os.getcwd()
         try:
-            cls.pre_flight(workspace, args)
-        except CmdFailure as e:
-            log.error(e)
-            raise e;
-        workspace.expand_variables()
-
-        if len(args.directories) == 0:
-            if cls.auto_all or args.doall:
-                repo_list = workspace.repos()
-            else:
-                args.directories = ["."]
-                
-        if len(args.directories) > 0:
-            repo_list = []
-            for d in map(workspace.path_relative_to_root, args.directories):
-                log.info("Running in {}".format(d))
-                r = workspace.get_repo(d)
-                if r is None:
-                    log.warning("Couldn't find repo/directory in workspace config: '{}'.".format(d))
-                    continue;
-                else:
-                    repo_list.append(r)
-
-        for repo in repo_list:
-            tmp_log_file_name=os.path.join(repo.container_directory,
-                                           "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
-
-            try: 
-                os.makedirs(workspace.absolute_path(repo.container_directory))
-            except OSError:
-                if not os.path.isdir(workspace.absolute_path(repo.container_directory)):
-                    log.error("Couldn't create directory '{}'".format(workspace.absolute_path(repo.container_directory)))
-                    raise
-                
-            final_log_file_name=os.path.join(repo.full_directory,
-                                             "{}.gtron-log.txt".format(cls.log_file_prefix))
-                
-            if cls.needs_log and not dry_run:
-                log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
-                log.info("Opened {} for logging".format(tmp_log_file_name))
-            else:
-                log_file = None
-                
             try:
-                preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
-                preamble_s = len(preamble) if len(preamble) < 60 else 60
-                postamble_format = "{:>" + str(60 - preamble_s) + "}[{}]\n"
-                if not dry_run and cls.pretty_print:
-                    log.info(preamble);
-                    sys.stderr.write(preamble)
-                r = cls.directory_op(repo, workspace, args, log_file)
-                if len(r) == 2:
-                    r = tuple(list(r) + [True])
-                    
-                if not dry_run and cls.pretty_print and r[2]:
-                    success = r[0]
-                    msg = r[1]
-                    log.info(preamble);
-                    if success:
-                        sys.stderr.write(postamble_format.format("", in_green(msg)))
-                    else:
-                        sys.stderr.write(postamble_format.format("", in_red(msg)))
-                if not dry_run and not r[2]:
-                    sys.stderr.write("\r")
-                    
+                cls.pre_flight(workspace, args)
             except CmdFailure as e:
+                log.error(e)
+                raise e;
+            workspace.expand_variables()
 
-                if cls.needs_log:
-                    log_file.write(str(e))
-                if not dry_run and cls.pretty_print:
-                    sys.stderr.write(postamble_format.format("", in_red("FAILED")))
-                if log_file is not None:
-                    log_file.close()
-                    log.warning("Last 10 lines of command output:")
-                    log.warning("".join(open(workspace.absolute_path(tmp_log_file_name), "r").readlines()[-10:]))
-                    
-            finally:
-                if cls.needs_log:
-                    try:
-                        os.rename(workspace.absolute_path(tmp_log_file_name),
-                                  workspace.absolute_path(final_log_file_name));
-                        log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
-                    except Exception as e:
-                        log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
-        os.chdir(oldPWD)
-        cls.post_flight(workspace, args)
+            if len(args.directories) == 0:
+                if cls.auto_all or args.doall:
+                    repo_list = workspace.repos()
+                else:
+                    args.directories = ["."]
+
+            if len(args.directories) > 0:
+                repo_list = []
+                for d in map(workspace.path_relative_to_root, args.directories):
+                    log.info("Running in {}".format(d))
+                    r = workspace.get_repo(d)
+                    if r is None:
+                        log.warning("Couldn't find repo/directory in workspace config: '{}'.".format(d))
+                        continue;
+                    else:
+                        repo_list.append(r)
+
+            for repo in repo_list:
+                tmp_log_file_name=os.path.join(repo.container_directory,
+                                               "{}-{}.gtron.log".format(repo.repo_directory, cls.log_file_prefix))
+
+                try: 
+                    os.makedirs(workspace.absolute_path(repo.container_directory))
+                except OSError:
+                    if not os.path.isdir(workspace.absolute_path(repo.container_directory)):
+                        log.error("Couldn't create directory '{}'".format(workspace.absolute_path(repo.container_directory)))
+                        raise
+
+                final_log_file_name=os.path.join(repo.full_directory,
+                                                 "{}.gtron-log.txt".format(cls.log_file_prefix))
+
+                if cls.needs_log and not dry_run:
+                    log_file = open(workspace.absolute_path(tmp_log_file_name), "w")
+                    log.info("Opened {} for logging".format(tmp_log_file_name))
+                else:
+                    log_file = None
+
+                try:
+                    preamble = "{} in {}: ".format(cls.log_file_prefix, repo.full_directory)
+                    preamble_s = len(preamble) if len(preamble) < 60 else 60
+                    postamble_format = "{:>" + str(60 - preamble_s) + "}[{}]\n"
+                    if not dry_run and cls.pretty_print:
+                        log.info(preamble);
+                        sys.stderr.write(preamble)
+                    r = cls.directory_op(repo, workspace, args, log_file)
+                    if len(r) == 2:
+                        r = tuple(list(r) + [True])
+
+                    if not dry_run and cls.pretty_print and r[2]:
+                        success = r[0]
+                        msg = r[1]
+                        log.info(preamble);
+                        if success:
+                            sys.stderr.write(postamble_format.format("", in_green(msg)))
+                        else:
+                            sys.stderr.write(postamble_format.format("", in_red(msg)))
+                    if not dry_run and not r[2]:
+                        sys.stderr.write("\r")
+
+                except CmdFailure as e:
+
+                    if cls.needs_log:
+                        log_file.write(str(e))
+                    if not dry_run and cls.pretty_print:
+                        sys.stderr.write(postamble_format.format("", in_red("FAILED")))
+                    if log_file is not None:
+                        log_file.close()
+                        log.warning("Last 10 lines of command output:")
+                        log.warning("".join(open(workspace.absolute_path(tmp_log_file_name), "r").readlines()[-10:]))
+
+                    if args.failstop:
+                        raise e;
+                finally:
+                    if cls.needs_log:
+                        try:
+                            os.rename(workspace.absolute_path(tmp_log_file_name),
+                                      workspace.absolute_path(final_log_file_name));
+                            log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
+                        except Exception as e:
+                            log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
+                            raise e;
+        finally:
+            os.chdir(oldPWD)
+            cls.post_flight(workspace, args)
 
 class cmd(DirectoryCommand):
     """
@@ -559,6 +567,9 @@ class cmd(DirectoryCommand):
         parser.add_argument(dest='cmd',
                             nargs=1,
                             help="Shell command")
+        parser.add_argument('--bare',
+                            action='store_true',
+                            help="Don't print anything other command output.")
         DirectoryCommand.add_args(parser)
 
             
@@ -566,13 +577,10 @@ class cmd(DirectoryCommand):
     def directory_op(cls, repo, workspace, args, log_file):
 
         chdir(workspace.absolute_path(repo.full_directory))
-        print "============ {} ============".format(repo.full_directory)
-        try:
-            do_cmd(args.cmd[0])
-            return (True, "Success")
-        except Exception as e:
-            log.exception(e)
-            return (False, "Failed")
+        if not args.bare:
+            print "============ {} ============".format(repo.full_directory)
+        do_cmd(args.cmd[0])
+        return (True, "Success")
 
             
 
@@ -805,14 +813,15 @@ class build(make):
         else:
             return (True, "NO BUILD")
 
-class list_repos(Command):
+class list_repos(DirectoryCommand):
     """
     Print a list of all the repos.  With the :code:`--eval` option, expand variables first.
     """
     
     description="List repositories that are part of this workspace"
     help="List repositories"
-
+    pretty_print=False
+    
     @classmethod
     def add_args(cls, parser):
         parser.add_argument("--eval",
@@ -825,17 +834,27 @@ class list_repos(Command):
                             action='store_true',
                             default=False,
                             help="List directories only")
-
+        parser.add_argument("--repos",
+                            required=False,
+                            action='store_true',
+                            default=False,
+                            help="List repos only")
+        DirectoryCommand.add_args(parser)
+        
     @classmethod
-    def go(cls, workspace, args):
-        if args.eval:
+    def pre_flight(cls, workspace, args):
+        if args.eval or args.repos:
             workspace.expand_variables()
-        for repo in workspace.repos():
-            if args.dirs:
-                print "{}".format(repo.full_directory)
-            else:
-                print "{}: {}".format(repo.full_directory, repo.url)
-                
+        
+    @classmethod
+    def directory_op(cls, repo, workspace, args, log_file):
+        if args.dirs:
+            print "{}".format(repo.full_directory)
+        elif args.repos:
+            print "{}".format(repo.url)
+        else:
+            print "{}: {}".format(repo.full_directory, repo.url)
+        return (True, "")
 
 class config_lint(Command):
     description="Parse and writout workspace.json"
@@ -1091,6 +1110,7 @@ class release(DirectoryCommand):
         parser.add_argument("--dev_branch", default="master", help="Branch to treat as the development branch")
         parser.add_argument("--rel_branch", default="release", help="Branch to treat as the release branch")
         parser.add_argument("--force", action="store_true", help="Release even if there are no changes")
+        parser.add_argument("--check", action="store_true", help="Just perform checks")
         
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
@@ -1147,12 +1167,16 @@ class release(DirectoryCommand):
             if not version_gt(dv, rv):
                 return (False, "Dev version too low")
 
+                        
             # switch to release branch
             do_cmd("git checkout {}".format(args.rel_branch),stderr=None, stdout=None)
 
             (LOCAL, REMOTE,BASE, junk) = check_up_to_date();
             if LOCAL != REMOTE:
                 return (False, "{} Not synced with origin".format(args.rel_branch))
+
+            if args.check:
+                return (True, "Ready to release")
 
             do_cmd("git merge {}".format(args.dev_branch), stderr=None, stdout=None)
             do_cmd("git tag -a v{} -m 'version {}'".format(dev_version, dev_version), stderr=None, stdout=None)

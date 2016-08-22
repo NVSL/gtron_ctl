@@ -2,6 +2,11 @@
     "repos": [
         {
             "directory": "Gadgets/Tools",
+            "no_build": "TRUE",
+            "url": "$NVSL_GIT/gtron-startup-scripts"
+        },
+        {
+            "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Gadgetron"
         },
         {
