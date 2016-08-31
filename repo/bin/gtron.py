@@ -62,7 +62,7 @@ class Repo:
             self.absolute_path = os.path.abspath(os.path.join(devel_root,self.full_directory))
             #print devel_root
             #print self.full_directory
-            print self.absolute_path
+            #print self.absolute_path
             self.stored_dep_wait = json.get("dep_wait")
             self.local = local
 
@@ -1310,7 +1310,7 @@ def check_up_to_date(wd):
     return (LOCAL,REMOTE, BASE, rev_parse_err)
 
 def get_branch(wd):
-    (j, branch, j) = do_cmd('git rev-parse --abbrev-ref HEAD" {}'.format(wd), stdout=None, stderr=None)
+    (j, branch, j) = do_cmd('git rev-parse --abbrev-ref HEAD {}'.format(wd), stdout=None, stderr=None)
     return branch.strip()
 
 class stat(DirectoryCommand):
