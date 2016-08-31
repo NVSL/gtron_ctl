@@ -50,30 +50,38 @@ class Repo:
     order_count = 0;
 
     def __init__(self,json,  devel_root, local=False):
-        self.url = json["url"]
-        self.container_directory = os.path.normpath(json["directory"])
-        self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
-        t = os.path.relpath(os.path.normpath(os.path.abspath(os.path.join(self.container_directory, self.repo_directory))),
-                            os.path.abspath(devel_root))
-        self.full_directory = t
-        self.absolute_path = os.path.abspath(self.full_directory)
-        self.stored_dep_wait = json.get("dep_wait")
-        self.local = local
+        try:
+            old_wd = os.getcwd()
+            os.chdir(devel_root)
+            self.url = json["url"]
+            self.container_directory = os.path.normpath(json["directory"])
+            self.repo_directory = re.search(".*/([\{\}\$\w\-]*)(/$)?", self.url).group(1)
+            t = os.path.relpath(os.path.normpath(os.path.abspath(os.path.join(self.container_directory, self.repo_directory))),
+                                os.path.abspath(devel_root))
+            self.full_directory = t
+            self.absolute_path = os.path.abspath(os.path.join(devel_root,self.full_directory))
+            #print devel_root
+            #print self.full_directory
+            print self.absolute_path
+            self.stored_dep_wait = json.get("dep_wait")
+            self.local = local
 
-        if json.get("no_build") is not None:
-            self.no_build = True if json.get("no_build").upper() == "TRUE" else False;
-        else:
-            self.no_build = False
+            if json.get("no_build") is not None:
+                self.no_build = True if json.get("no_build").upper() == "TRUE" else False;
+            else:
+                self.no_build = False
 
-        if json.get("branch") is not None:
-            self.branch = json.get("branch")
-        else:
-            self.branch = None;
+            if json.get("branch") is not None:
+                self.branch = json.get("branch")
+            else:
+                self.branch = None;
 
-        if self.stored_dep_wait:
-            Repo.order_count += 1
+            if self.stored_dep_wait:
+                Repo.order_count += 1
 
-        self.sort_by = Repo.order_count;
+            self.sort_by = Repo.order_count;
+        finally:
+            os.chdir(old_wd)
 
     def to_json(self):
         r =  {"url": self.url,
