@@ -1,66 +1,71 @@
 {
-    "repos": [
-        {
-            "directory": "Gadgets/Tools",
-            "no_build": "TRUE",
-            "url": "$NVSL_GIT/gtron-startup-scripts"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Gadgetron"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/BOBBuilder"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/BOMGenerator"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/TAZI"
-        },
-        {
-            "directory": "Gadgets/Libraries",
-            "url": "$NVSL_GIT/GadgetronSketchBook"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/dummysch"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/CaseMaker"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Swoop"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Dingo"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/GadgetMaker2"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/ucsdgadgetron"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Checkers"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/Eagle"
-        },
-        {
-            "directory": "Gadgets/Tools",
-            "url": "$NVSL_GIT/EagleArt"
-        },
+  "repos": [
+    {
+      "directory": "..",
+      "url": "$NVSL_GIT/gtron_devel"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "no_build": "TRUE",
+      "url": "$NVSL_GIT/gtron-startup-scripts",
+      "dep_wait": true
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Gadgetron"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/BOBBuilder"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/BOMGenerator"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/TAZI"
+    },
+    {
+      "directory": "Gadgets/Libraries",
+      "url": "$NVSL_GIT/GadgetronSketchBook"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/dummysch"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/CaseMaker"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Swoop"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Dingo"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/GadgetMaker2"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/ucsdgadgetron"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Checkers"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Eagle"
+    },
+    {
+      "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/EagleArt"
+    },
         {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/EagleComposer"
@@ -103,20 +108,21 @@
         },
         {
             "directory": "Gadgets/Tools",
-            "order": "700",
-            "url": "$NVSL_GIT/CbC"
-        },
-	{
-	    "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/Koala"
         },
         {
             "directory": "Gadgets/Libraries",
-            "url": "$NVSL_GIT/JetComponents"
+            "url": "$NVSL_GIT/JetComponents",
+            "dep_wait": true
         },
-	{
+        {
+            "directory": "Gadgets/Tools",
+            "url": "$NVSL_GIT/CbC"
+        },
+        {
             "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
-            "url": "$NVSL_GIT/Adafruit_LED_Backpack"
+            "url": "$NVSL_GIT/Adafruit_LED_Backpack",
+            "dep_wait": true
         },
         {
             "directory": "Gadgets/Libraries/JetComponents/ExternalLibraries",
@@ -125,10 +131,9 @@
         {
             "directory": "Gadgets/Designs",
             "no_build": "TRUE",
-            "order": "1000",
             "url": "$NVSL_GIT/gtron-design-template"
         },
-	{
+        {
             "directory": "Gadgets/Tools",
             "url": "$NVSL_GIT/EagleServer"
         },
@@ -147,9 +152,10 @@
         {
             "directory": "Gadgets/Tools",
             "order": "1000",
-            "url": "$NVSL_GIT/jet"
+            "url": "$NVSL_GIT/jet",
+            "dep_wait": true
         },
-	{
+        {
             "directory": "Gadgets/Designs",
             "url": "$NVSL_GIT/testGadget"
         }
