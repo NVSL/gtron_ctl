@@ -56,6 +56,7 @@ class Repo:
         t = os.path.relpath(os.path.normpath(os.path.abspath(os.path.join(self.container_directory, self.repo_directory))),
                             os.path.abspath(devel_root))
         self.full_directory = t
+        self.absolute_path = os.path.abspath(self.full_directory)
         self.stored_dep_wait = json.get("dep_wait")
         self.local = local
 
@@ -152,6 +153,9 @@ class WorkspaceConfig:
             
     def repos(self):
         return sorted(self.repo_map.itervalues(), cmp=lambda x,y: cmp(x.sort_by, y.sort_by));
+
+    def get_repo_dirs(self):
+        return map(lambda x: x.absolute_path, self.repos())
 
     def add_repo(self, r):
         log.info("Adding repo '{}' -> '{}'".format(r.full_directory, r.url))
@@ -694,7 +698,7 @@ class update(DirectoryCommand):
                 #chdir(workspace.absolute_path(repo.full_directory))
 
                 if args.restore_default_branch or args.branch is not None:
-                    do_cmd("cd {}; git checkout {}".format(wb, branch),
+                    do_cmd("cd {}; git checkout {}".format(wd, branch),
                            stdout=log_file, 
                            stderr=log_file)
                 (r, out, err) = do_cmd("cd {}; git pull".format(wd), raise_on_err=False, stdout=log_file, stderr=log_file)
@@ -1139,6 +1143,15 @@ def load_version():
     text = text.strip()
     return text.split(".")
 
+def has_uncommited_changes(wd):
+    (j1, git_status, j2) = do_cmd("cd {}; git status".format(wd), stdout=None, stderr=None)
+    if git_status is not None:
+        if "Changes not staged for commit" in git_status:
+            unstaged = True;
+        else:
+            unstaged = False;
+    return unstaged
+
 class release(DirectoryCommand):
     """Merge master into release"""
     description="Merge master into release"
@@ -1186,11 +1199,8 @@ class release(DirectoryCommand):
         try:
             if LOCAL != REMOTE:
                 return (False, "{} need pull and/or push".format(args.dev_branch))
-
-            (j1, git_status, j2) = do_cmd("cd {}; git status".format(wd), stdout=None, stderr=None)
-            if git_status is not None:
-                if "Changes not staged for commit" in git_status:
-                    return (False, "{} needs commit".format(args.dev_branch))
+            if has_uncommited_changes(wd):
+                return (False, "{} needs commit".format(args.dev_branch))
 
             # check if the two version have diverged
             (j2, DEV,j3)=do_cmd("cd {}; git rev-parse {}".format(wd,args.dev_branch), stderr=None, stdout=None, raise_on_err=False, read_only=True)
@@ -1229,7 +1239,10 @@ class release(DirectoryCommand):
             return (True, "Success")
         finally:
             do_cmd('cd {}; git checkout {}'.format(wd, current_branch),stderr=None, stdout=None)
-            
+
+
+
+
 class bump_version(DirectoryCommand):
     """Increase version number"""
     description="Increase version number"
@@ -1287,6 +1300,10 @@ def check_up_to_date(wd):
     (j2, REMOTE,rev_parse_err)=do_cmd("cd {}; git rev-parse @{{u}}".format(wd), stderr=None, stdout=None, raise_on_err=False, read_only=True)
     (j3, BASE,j3)=do_cmd("cd {}; git merge-base @ @{{u}}".format(wd), stderr=None, stdout=None, raise_on_err=False, read_only=True)
     return (LOCAL,REMOTE, BASE, rev_parse_err)
+
+def get_branch(wd):
+    (j, branch, j) = do_cmd('git rev-parse --abbrev-ref HEAD" {}'.format(wd), stdout=None, stderr=None)
+    return branch.strip()
 
 class stat(DirectoryCommand):
     """Intelligently check status for all repos"""
@@ -1371,7 +1388,8 @@ def sanity(workspace):
                                                                                                            "Gadgetron")))
         return False
     return True;
-    
+
+
 def main():
 
     panda = ParseAndDispatch("Workspace manager for Gadgetron",
@@ -1384,9 +1402,6 @@ def main():
                               action='store_true',
                               help="Just print what would be done")
 
-    dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)),"..",".."))
-    global_config = os.path.join(dev_root,"repo","config","workspace.json")
-    local_config = os.path.join(dev_root,"repo","config","workspace.local.json")
 
     panda.parser.add_argument("--root",
                               dest='devel_root',
@@ -1457,8 +1472,6 @@ def main():
     panda.add_command(config_unset)
     panda.add_command(config_dump)
 
-
-
     args = panda.parse_args(sys.argv[1:])
 
     if args.verbose:
@@ -1489,3 +1502,9 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)), "..", ".."))
+global_config = os.path.join(dev_root, "repo", "config", "workspace.json")
+local_config = os.path.join(dev_root, "repo", "config", "workspace.local.json")
+
+theWorkspace = WorkspaceConfig(dev_root, global_config, local_config)
