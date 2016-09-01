@@ -1,0 +1,11 @@
+/Gadgets/*
+.gitignore
+*~
+\#*
+*.pyc
+repo/build
+*.bak
+repo/doc/_build
+repo/venv
+repo/logs
+.idea
