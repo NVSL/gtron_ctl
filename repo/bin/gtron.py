@@ -598,7 +598,6 @@ class DirectoryCommand(Command):
                     log.info("Moved {} to {}.".format(tmp_log_file_name, final_log_file_name))
                 except Exception as e:
                     log.info("Couldn't move {} to {}.".format(tmp_log_file_name, final_log_file_name))
-                    raise e;
 
 
 class cmd(DirectoryCommand):
