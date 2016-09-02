@@ -1508,11 +1508,12 @@ def main():
     if args.dump:
         workspace.dump()
 
-if __name__ == "__main__":
-    main()
 
 dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)), "..", ".."))
 global_config = os.path.join(dev_root, "repo", "config", "workspace.json")
 local_config = os.path.join(dev_root, "repo", "config", "workspace.local.json")
 
 theWorkspace = WorkspaceConfig(dev_root, global_config, local_config)
+
+if __name__ == "__main__":
+    main()
