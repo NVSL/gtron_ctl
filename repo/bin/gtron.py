@@ -1196,13 +1196,30 @@ class release(DirectoryCommand):
                     
         #chdir(workspace.absolute_path(repo.full_directory))
         wd = workspace.absolute_path(repo.full_directory)
-        (j1, current_branch,j1)=do_cmd("cd {}; git rev-parse --abbrev-ref HEAD".format(wd, workspace.absolute_path(repo.full_directory)), stderr=None, stdout=None, read_only=True)
-        current_branch =current_branch.strip()
+
+
+        current_branch = get_branch(wd)
         if current_branch != args.dev_branch:
             return (False, "Wrong Branch: {}; should be {}".format(current_branch, args.dev_branch))
 
+        try:
+            do_cmd("cd {}; git checkout {}".format(wd, args.rel_branch), stdout=None, stderr=None)
+            (LOCAL, REMOTE, BASE, junk) = check_up_to_date(wd)
+
+            if LOCAL == REMOTE:
+                pass;
+            elif LOCAL == BASE:
+                do_cmd("cd {}; git pull", stdout=None,stderr=None);
+            elif REMOTE == BASE:
+                return (False, "{} needs push. Shouldn't happen. Stop now!".format(args.rel_branch))
+            else:
+                return (False, "{} has diverged. Shouldn't happen. Stop now!".format(args.rel_branch))
+
+        finally:
+            do_cmd("cd {}; git checkout {}".format(wd, args.dev_branch), stdout=None, stderr=None)
+
         # on the dev branch
-        (LOCAL, REMOTE,BASE, junk) = check_up_to_date(wd);
+        (LOCAL, REMOTE,BASE, junk) = check_up_to_date(wd)
 
         try:
             if LOCAL != REMOTE:
@@ -1310,7 +1327,7 @@ def check_up_to_date(wd):
     return (LOCAL,REMOTE, BASE, rev_parse_err)
 
 def get_branch(wd):
-    (j, branch, j) = do_cmd('git rev-parse --abbrev-ref HEAD {}'.format(wd), stdout=None, stderr=None)
+    (j, branch, j) = do_cmd('cd {}; git rev-parse --abbrev-ref HEAD'.format(wd), stdout=None, stderr=None)
     return branch.strip()
 
 class stat(DirectoryCommand):
@@ -1507,7 +1524,6 @@ def main():
     args.func(workspace, args)
     if args.dump:
         workspace.dump()
-
 
 dev_root = os.path.normpath(os.path.join(os.path.dirname(os.path.normpath(__file__)), "..", ".."))
 global_config = os.path.join(dev_root, "repo", "config", "workspace.json")
