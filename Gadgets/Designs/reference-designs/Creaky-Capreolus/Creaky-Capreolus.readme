@@ -1,0 +1,45 @@
+README for gadget: Creaky Capreolus
+
+Components:
+	brain:	Adafruit-Pro-Trinket-5V-battery-powered
+	battery:	battery-9V-vertical
+	display:	Adafruit-7seg-backpack-red
+	knob:	Adafruit-rotary-encoder
+	buzzer:	piezo-buzzer-variable
+	led_2:	RGB-LED-5mm
+	button:	tactile-button-round-red
+	button_2:	tactile-button-round-yellow
+	proto_area:	Gadgetron-proto-area-10x10
+	analog:	Gadgetron-breakout-analog-1
+	digital:	Gadgetron-breakout-digital-1
+	power:	Gadgetron-breakout-power
+	digital_2:	Gadgetron-breakout-digital-3-powered
+
+Connections:
+	[brain.A4_0_brain, display.SDA_2_display]
+	[brain.A5_0_brain, display.SCL_2_display]
+	(brain.D3_0_brain, buzzer.1_4_buzzer)
+	(brain.D5_0_brain, led_2.CONTROL_RED_5_led_2)
+	(brain.D6_0_brain, led_2.CONTROL_GREEN_5_led_2)
+	(brain.D9_0_brain, led_2.CONTROL_BLUE_5_led_2)
+	(brain.A0_0_brain, analog.PIN1_9_analog)
+	(brain.D4_0_brain, knob.SENSE_3_knob)
+	(brain.D8_0_brain, knob.A_3_knob)
+	(brain.D10_0_brain, knob.B_3_knob)
+	(brain.D11_0_brain, button.SENSE_6_button)
+	(brain.D12_0_brain, button_2.SENSE_7_button_2)
+	(brain.D13_0_brain, digital.PIN1_10_digital)
+	(brain.A1_0_brain, digital_2.PIN2_12_digital_2)
+	(brain.A2_0_brain, digital_2.PIN3_12_digital_2)
+	(brain.A3_0_brain, digital_2.PIN4_12_digital_2)
+	[brain.+5V_0_brain, digital_2.PIN1_12_digital_2, display.VDD_2_display, led_2.VCC5V_5_led_2, proto_area.VCC_8_proto_area, power.VCC_11_power]
+	[battery.POS_1_battery, brain.VBAT_0_brain]
+	[brain.GND_0_brain, brain.GND1_0_brain, power.GND_11_power, digital_2.GND_12_digital_2, button_2.GND_7_button_2, battery.NEG_1_battery, brain.GND2_0_brain, knob.GND_3_knob, button.GND_6_button, analog.GND_9_analog, display.GND_2_display, digital.GND_10_digital, buzzer.2_4_buzzer, proto_area.GND_8_proto_area]
+
+Power plan:
+	brain.+5V_out provides power to digital_2.PIN1
+	brain.+5V_out provides power to led_2.VCC
+	brain.+5V_out provides power to display.VDD
+	brain.+5V_out provides power to proto_area.VDD
+	brain.+5V_out provides power to power.VCC
+	battery.+9V_out provides power to brain.+VBat

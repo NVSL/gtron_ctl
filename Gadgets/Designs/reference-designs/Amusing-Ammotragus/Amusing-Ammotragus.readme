@@ -1,0 +1,45 @@
+README for gadget: Amusing Ammotragus
+
+Components:
+	brain:	Adafruit-Pro-Trinket-5V-battery-powered
+	battery:	battery-9V-vertical
+	drive:	dual-motor-kit-narrow-fast
+	pincer:	micro-gripper
+	Servo:	servo-normal-side
+	caster:	ball-caster-0.75in
+	pwm:	Gadgetron-breakout-pwm-1
+	i2c:	Gadgetron-breakout-i2c
+	i2c_2:	Gadgetron-breakout-serial
+	Servo_2:	servo-break-out
+	pincer_2:	micro-gripper
+
+Connections:
+	[brain.A4_0_brain, i2c.SDA_7_i2c]
+	[brain.A5_0_brain, i2c.SCL_7_i2c]
+	[brain.TXD1_0_brain, i2c_2.RX_8_i2c_2]
+	[brain.RXD1_0_brain, i2c_2.TX_8_i2c_2]
+	(brain.D3_0_brain, pincer.DATA_3_pincer)
+	(brain.D4_0_brain, Servo.DATA_4_Servo)
+	(brain.D5_0_brain, Servo_2.DATA_9_Servo_2)
+	(brain.D6_0_brain, pincer_2.DATA_10_pincer_2)
+	(brain.D9_0_brain, drive.PWMA_2_drive)
+	[brain.D10_0_brain, drive.PWMB_2_drive, pwm.PIN1_6_pwm]
+	(brain.D8_0_brain, drive.STBY_2_drive)
+	(brain.D11_0_brain, drive.AIN1_2_drive)
+	(brain.D12_0_brain, drive.AIN2_2_drive)
+	(brain.D13_0_brain, drive.BIN1_2_drive)
+	(brain.A0_0_brain, drive.BIN2_2_drive)
+	[brain.+5V_0_brain, drive.VCC_2_drive, i2c.VCC_7_i2c, i2c_2.VCC_8_i2c_2]
+	[battery.POS_1_battery, pincer.VCC_3_pincer, drive.VM_2_drive, pincer_2.VCC_10_pincer_2, Servo.VCC_4_Servo, Servo_2.VCC_9_Servo_2, brain.VBAT_0_brain]
+	[brain.GND_0_brain, brain.GND1_0_brain, Servo.GND_4_Servo, i2c_2.GND_8_i2c_2, brain.GND2_0_brain, pincer.GND_3_pincer, pincer_2.GND_10_pincer_2, i2c.GND_7_i2c, Servo_2.GND_9_Servo_2, drive.GND_2_drive, pwm.GND_6_pwm, battery.NEG_1_battery]
+
+Power plan:
+	brain.+5V_out provides power to drive.VCC
+	brain.+5V_out provides power to i2c.VCC
+	brain.+5V_out provides power to i2c_2.VCC
+	battery.+9V_out provides power to pincer.VCC
+	battery.+9V_out provides power to Servo.VCC
+	battery.+9V_out provides power to Servo_2.VCC
+	battery.+9V_out provides power to pincer_2.VCC
+	battery.+9V_out provides power to brain.+VBat
+	battery.+9V_out provides power to drive.VM

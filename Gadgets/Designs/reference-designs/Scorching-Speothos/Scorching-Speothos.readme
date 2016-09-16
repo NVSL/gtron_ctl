@@ -1,0 +1,37 @@
+README for gadget: Scorching Speothos
+
+Components:
+	brain:	Adafruit-Pro-Trinket-5V-battery-powered
+	battery:	battery-9V-vertical
+	display:	Adafruit-8x8-1.2in-led-array-white
+	caster:	ball-caster-0.75in
+	drive:	dual-motor-kit-knobby
+	distanceSensor:	analog_distance_sensor
+	led:	LED-5mm-bright-white
+	bump:	bump-switch-medium-left
+	bump_2:	bump-switch-medium-right
+
+Connections:
+	[brain.A4_0_brain, display.SDA_2_display]
+	[brain.A5_0_brain, display.SCL_2_display]
+	(brain.D3_0_brain, drive.PWMA_4_drive)
+	(brain.D5_0_brain, drive.PWMB_4_drive)
+	(brain.A0_0_brain, distanceSensor.A_5_distanceSensor)
+	(brain.D4_0_brain, drive.STBY_4_drive)
+	(brain.D6_0_brain, drive.AIN1_4_drive)
+	(brain.D8_0_brain, drive.AIN2_4_drive)
+	(brain.D9_0_brain, drive.BIN1_4_drive)
+	(brain.D10_0_brain, drive.BIN2_4_drive)
+	(brain.D11_0_brain, led.CONTROL_6_led)
+	(brain.D12_0_brain, bump.SENSE_7_bump)
+	(brain.D13_0_brain, bump_2.SENSE_8_bump_2)
+	[brain.+5V_0_brain, drive.VCC_4_drive, distanceSensor.VCC_5_distanceSensor, display.VDD_2_display]
+	[battery.POS_1_battery, brain.VBAT_0_brain, drive.VM_4_drive]
+	[brain.GND_0_brain, brain.GND1_0_brain, bump.GND_7_bump, battery.NEG_1_battery, drive.GND_4_drive, led.GND_6_led, display.GND_2_display, bump_2.GND_8_bump_2, distanceSensor.GND_5_distanceSensor, brain.GND2_0_brain]
+
+Power plan:
+	brain.+5V_out provides power to drive.VCC
+	brain.+5V_out provides power to distanceSensor.CONTROL
+	brain.+5V_out provides power to display.VDD
+	battery.+9V_out provides power to brain.+VBat
+	battery.+9V_out provides power to drive.VM
