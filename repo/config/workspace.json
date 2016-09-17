@@ -158,7 +158,12 @@
         {
             "directory": "Gadgets/Designs",
             "url": "$NVSL_GIT/testGadget"
+        },
+        {
+            "directory": "Gadgets/Designs",
+            "url": "$NVSL_GIT/gtron-reference-designs"
         }
+
     ],
     "vars": {
         "NVSL_GIT": "git@github.com:NVSL",
