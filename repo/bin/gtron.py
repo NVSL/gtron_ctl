@@ -12,10 +12,7 @@ import logging as log
 import StringIO
 import platform
 import threading
-"""
 
-
-"""
 
 dry_run = False;
 
@@ -468,6 +465,9 @@ class DirectoryCommand(Command):
         parser.add_argument("--enforce_deps",
                             action="store_true",
                             help="Enforce dependencies during parallel execution")
+        parser.add_argument("--no_gtron",
+                            action="store_true",
+                            help="Don't run command on gtron")
         parser.add_argument("directories",
                             nargs="*",
                             help="Directories to operate on")
@@ -493,8 +493,11 @@ class DirectoryCommand(Command):
             if len(args.directories) == 0:
                 if cls.auto_all or args.doall:
                     repo_list = workspace.repos()
+                    if args.no_gtron:
+                        repo_list = [r for r in repo_list if r != workspace.get_repo(".")]
                 else:
                     args.directories = ["."]
+
 
             if len(args.directories) > 0:
                 repo_list = []
@@ -603,13 +606,13 @@ class DirectoryCommand(Command):
 class cmd(DirectoryCommand):
     """
     Run a shell command in all the repos.
-    
+
     :param --cmd:  The command to run.
     """
-    description="Run a shell command in all the repos."
-    help="Run a shell command in all the repos."
-    needs_log=False
-    pretty_print=False
+    description = "Run a shell command in all the repos."
+    help = "Run a shell command in all the repos."
+    needs_log = False
+    pretty_print = False
 
     @classmethod
     def add_args(cls, parser):
@@ -621,16 +624,29 @@ class cmd(DirectoryCommand):
                             help="Don't print anything other command output.")
         DirectoryCommand.add_args(parser)
 
-            
     @classmethod
     def directory_op(cls, repo, workspace, args, log_file):
-
         if not args.bare:
             print "============ {} ============".format(repo.full_directory)
-        do_cmd("cd {}; {}".format(workspace.absolute_path(repo.full_directory),args.cmd[0]))
+        do_cmd("cd {}; {}".format(workspace.absolute_path(repo.full_directory), args.cmd[0]))
         return (True, "Success")
 
-            
+
+class git(cmd):
+    """
+    Run a git command everywhere
+
+
+    """
+    description = "Run a git command in all the repos."
+    help = "Run a git command in all the repos."
+    needs_log = True
+    pretty_print = False
+
+    @classmethod
+    def pre_flight(cls, workspace, args):
+        args.cmd[0] = "git " + args.cmd[0]
+
 
 class update(DirectoryCommand):
     """
@@ -1477,6 +1493,7 @@ def main():
     panda.add_command(status)
     panda.add_command(make)
     panda.add_command(cmd)
+    panda.add_command(git)
     panda.add_command(add_repo)
     panda.add_command(remove_repo)
     panda.add_command(new_design)
