@@ -205,7 +205,7 @@ function build () {
 }
 
 function confirm_venv() {
-    if ! gtron sanity_check; then
+    if ! gtron.py sanity_check; then
 	error "Not in \$GADGETRON_VENV virtual env.  Quiting."
 	exit 1
     fi
