@@ -44,6 +44,10 @@
     },
     {
       "directory": "Gadgets/Tools",
+      "url": "$NVSL_GIT/Quetzal"
+    },
+    {
+      "directory": "Gadgets/Tools",
       "url": "$NVSL_GIT/Dingo"
     },
     {
