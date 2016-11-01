@@ -728,6 +728,8 @@ class update(DirectoryCommand):
                 if not dry_run:
                     if err.find("There is no tracking information for the current branch") is not -1:
                         success_message = "MISSING UPSTREAM BRANCH"
+		    elif r == 1:
+                        raise CmdFailure(r, out, "PULL FAILED")
 
 
             else:

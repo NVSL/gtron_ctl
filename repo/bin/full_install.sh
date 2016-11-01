@@ -10,12 +10,12 @@ else
 fi
 
 if ! curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_util.sh > install_util.sh; then
-    echo couldn't download install_util.sh;
+    echo "couldn't download install_util.sh;"
     exit 1
 fi
     
 if ! curl https://raw.githubusercontent.com/NVSL/gtron_devel/${branch}/repo/lib/install_common.sh > install_common.sh; then
-    echo couldn't download install_util.sh;
+    echo "couldn't download install_util.sh;"
     exit 1
 fi
 
